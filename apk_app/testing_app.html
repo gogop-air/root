@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vocab Trainer — English Course</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1a73e8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Vocab" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+      color: #222;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { color: #1a73e8; }
+    h2 { border-bottom: 2px solid #1a73e8; padding-bottom: 4px; }
+    section {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-family: monospace;
+    }
+    button {
+      background: #1a73e8;
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 8px;
+      margin-top: 6px;
+    }
+    button:hover { background: #1557b0; }
+    button:disabled { background: #aaa; cursor: default; }
+    button.ghost {
+      background: #fff;
+      color: #1a73e8;
+      border: 1px solid #1a73e8;
+    }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+    th { background: #f5f7fa; }
+    td input {
+      width: 100%;
+      border: none;
+      background: transparent;
+      font-size: 14px;
+    }
+    td input:focus { outline: 2px solid #1a73e8; border-radius: 4px; }
+    td button { padding: 4px 10px; background: #e53935; }
+    #photo-preview { max-width: 300px; display: none; margin-top: 10px; border-radius: 8px; }
+    #status-msg { color: #1a73e8; font-weight: 600; min-height: 20px; }
+    .quiz-card {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 12px;
+      text-align: center;
+    }
+    .quiz-card .word { font-size: 28px; font-weight: 700; margin: 10px 0; }
+    .options { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+    .options button {
+      background: #f0f4ff;
+      color: #222;
+      border: 1px solid #c9d6f0;
+      margin: 0;
+      padding: 12px;
+      font-size: 16px;
+    }
+    .options button:hover:not(:disabled) { background: #dce7fb; }
+    .options button.correct { background: #c8f2d4; border-color: #34a853; color: #1e7e34; }
+    .options button.wrong { background: #fdd; border-color: #e53935; color: #b71c1c; }
+    .feedback { font-weight: 700; margin-top: 12px; min-height: 24px; }
+    .feedback.ok { color: #2e7d32; }
+    .feedback.fail { color: #c62828; }
+    input.answer-input {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+      width: 100%;
+      max-width: 320px;
+      text-align: center;
+    }
+    .mode-row { margin-bottom: 10px; }
+    .mode-row label { margin-right: 12px; cursor: pointer; }
+    #stats { font-weight: 600; color: #555; }
+    .bar { height: 8px; background: #e0e0e0; border-radius: 4px; margin-top: 8px; overflow: hidden; }
+    .bar > div { height: 100%; background: #1a73e8; width: 0; transition: width 0.3s; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Vocab Trainer — English Course</h1>
+
+    <section>
+      <h2>1. Load photo &amp; OCR</h2>
+      <input type="file" id="photo-input" accept="image/*" />
+      <img id="photo-preview" alt="preview" />
+      <p id="status-msg"></p>
+      <textarea id="raw-text" rows="6" placeholder="Recognized text will appear here (or paste text manually)"></textarea>
+    </section>
+
+    <section>
+      <h2>2. Words list</h2>
+      <button id="parse-btn">Parse from text</button>
+      <button id="add-row-btn" class="ghost">Add row</button>
+      <table id="words-table">
+        <thead>
+          <tr><th>Word</th><th>Translation</th><th>Example</th><th></th></tr>
+        </thead>
+        <tbody id="words-tbody"></tbody>
+      </table>
+      <button id="save-list-btn">Save list</button>
+      <button id="clear-list-btn" class="ghost">Clear list</button>
+    </section>
+
+    <section>
+      <h2>3. Quiz</h2>
+      <div class="mode-row">
+        <label><input type="radio" name="direction" value="en-ru" checked /> Word → Translation</label>
+        <label><input type="radio" name="direction" value="ru-en" /> Translation → Word</label>
+        <label><input type="radio" name="mode" value="choice" checked /> Multiple choice</label>
+        <label><input type="radio" name="mode" value="typing" /> Typing</label>
+      </div>
+      <button id="start-quiz-btn">Start quiz</button>
+      <div id="quiz-area"></div>
+      <p id="stats"></p>
+      <div class="bar"><div id="progress-fill"></div></div>
+    </section>
+  </div>
+
+  <script src="https://unpkg.com/tesseract.js@4.1.0/dist/tesseract.min.js"></script>
+  <script>
+    // ==================== ОБЩЕЕ ====================
+    const input = document.getElementById('photo-input');
+    const preview = document.getElementById('photo-preview');
+    const rawText = document.getElementById('raw-text');
+    const statusMsg = document.getElementById('status-msg');
+
+    function setStatus(text) {
+      statusMsg.textContent = text;
+    }
+
+    // ==================== 1. OCR ====================
+    input.addEventListener('change', async () => {
+      const file = input.files[0];
+      if (!file) return;
+
+      preview.src = URL.createObjectURL(file);
+      preview.style.display = 'block';
+      setStatus('Recognizing...');
+
+      try {
+        const { data: { text } } = await Tesseract.recognize(file, 'eng+rus', {
+          logger: m => {
+            if (m.status === 'recognizing text') {
+              setStatus('Progress: ' + Math.round(m.progress * 100) + '%');
+            }
+          }
+        });
+        rawText.value = text;
+        setStatus('Done! Check the text, fix mistakes if needed, then press "Parse from text".');
+      } catch (err) {
+        console.error(err);
+        setStatus('Error during recognition. Check console (F12).');
+      }
+    });
+
+    // ==================== 2. СЛОВАРЬ ====================
+    let currentWords = JSON.parse(localStorage.getItem('vocab_list') || '[]');
+    const tbody = document.getElementById('words-tbody');
+
+    function renderTable() {
+      tbody.innerHTML = '';
+      currentWords.forEach((item, index) => {
+        const tr = document.createElement('tr');
+
+        const tdWord = document.createElement('td');
+        const tdTrans = document.createElement('td');
+        const tdExample = document.createElement('td');
+        const tdDelete = document.createElement('td');
+
+        const wordInput = document.createElement('input');
+        wordInput.type = 'text';
+        wordInput.value = item.word;
+        wordInput.addEventListener('input', () => { currentWords[index].word = wordInput.value; });
+
+        const transInput = document.createElement('input');
+        transInput.type = 'text';
+        transInput.value = item.translation;
+        transInput.addEventListener('input', () => { currentWords[index].translation = transInput.value; });
+
+        const exampleInput = document.createElement('input');
+        exampleInput.type = 'text';
+        exampleInput.placeholder = 'Example sentence';
+        exampleInput.value = item.example || '';
+        exampleInput.addEventListener('input', () => { currentWords[index].example = exampleInput.value; });
+
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'X';
+        delBtn.addEventListener('click', () => {
+          currentWords.splice(index, 1);
+          renderTable();
+        });
+
+        tdWord.appendChild(wordInput);
+        tdTrans.appendChild(transInput);
+        tdExample.appendChild(exampleInput);
+        tdDelete.appendChild(delBtn);
+
+        tr.appendChild(tdWord);
+        tr.appendChild(tdTrans);
+        tr.appendChild(tdExample);
+        tr.appendChild(tdDelete);
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById('parse-btn').addEventListener('click', () => {
+      const text = rawText.value;
+      if (!text.trim()) {
+        setStatus('Load a photo or paste text first!');
+        return;
+      }
+
+      const lines = text.split('\n');
+      const foundWords = [];
+
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        const match = trimmed.match(/^(.+?)\s*[-—–:]\s*(.+)$/);
+        if (match) {
+          const word = match[1].trim();
+          const translation = match[2].trim();
+          if (word && translation) {
+            foundWords.push({ word, translation, example: '' });
+          }
+        }
+      });
+
+      if (foundWords.length === 0) {
+        setStatus('No pairs found. Format the text as "word - translation", one per line.');
+        return;
+      }
+
+      currentWords = foundWords;
+      renderTable();
+      setStatus('Found ' + foundWords.length + ' words. Edit cells if needed, then "Save list".');
+    });
+
+    document.getElementById('add-row-btn').addEventListener('click', () => {
+      currentWords.push({ word: '', translation: '', example: '' });
+      renderTable();
+    });
+
+    document.getElementById('save-list-btn').addEventListener('click', () => {
+      localStorage.setItem('vocab_list', JSON.stringify(currentWords));
+      setStatus('List saved (' + currentWords.length + ' words). It will stay after page reload.');
+    });
+
+    document.getElementById('clear-list-btn').addEventListener('click', () => {
+      if (confirm('Delete all words?')) {
+        currentWords = [];
+        localStorage.removeItem('vocab_list');
+        renderTable();
+        setStatus('List cleared.');
+      }
+    });
+
+    renderTable();
+
+    // ==================== 3. КВИЗ ====================
+    const quizArea = document.getElementById('quiz-area');
+    const stats = document.getElementById('stats');
+    const progressFill = document.getElementById('progress-fill');
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    document.getElementById('start-quiz-btn').addEventListener('click', () => {
+      const validWords = currentWords.filter(w => w.word && w.translation);
+      if (validWords.length < 4) {
+        setStatus('Need at least 4 words with translation for the quiz!');
+        return;
+      }
+
+      const direction = document.querySelector('input[name="direction"]:checked').value;
+      const mode = document.querySelector('input[name="mode"]:checked').value;
+      const shuffled = shuffle(validWords);
+      let currentIndex = 0;
+      let score = 0;
+
+      function question() {
+        return direction === 'en-ru'
+          ? { prompt: shuffled[currentIndex].word, correct: shuffled[currentIndex].translation }
+          : { prompt: shuffled[currentIndex].translation, correct: shuffled[currentIndex].word };
+      }
+
+      function showProgress() {
+        stats.textContent = 'Progress: ' + (currentIndex + 1) + ' / ' + shuffled.length + ' | Score: ' + score;
+        progressFill.style.width = ((currentIndex) / shuffled.length * 100) + '%';
+      }
+
+      function finish() {
+        progressFill.style.width = '100%';
+        quizArea.innerHTML =
+          '<div class="quiz-card"><h3>Quiz finished!</h3>' +
+          '<p>Score: ' + score + ' / ' + shuffled.length + '</p>' +
+          '<p>' + (score === shuffled.length ? 'Perfect! 🎉' : 'Good job! Try again to improve your score.') + '</p></div>';
+        stats.textContent = '';
+      }
+
+      function next() {
+        currentIndex++;
+        if (currentIndex >= shuffled.length) finish();
+        else render();
+      }
+
+      function render() {
+        quizArea.innerHTML = '';
+        showProgress();
+        const q = question();
+        const card = document.createElement('div');
+        card.className = 'quiz-card';
+
+        const label = document.createElement('div');
+        label.textContent = mode === 'choice'
+          ? 'Choose the correct answer:'
+          : 'Type the translation:';
+        const wordEl = document.createElement('div');
+        wordEl.className = 'word';
+        wordEl.textContent = q.prompt;
+        card.appendChild(label);
+        card.appendChild(wordEl);
+
+        const feedback = document.createElement('p');
+        feedback.className = 'feedback';
+
+        if (mode === 'choice') {
+          const wrongs = shuffle(validWords.filter(w => w !== shuffled[currentIndex])).slice(0, 3);
+          const options = shuffle([q.correct, ...wrongs.map(w => direction === 'en-ru' ? w.translation : w.word)]);
+
+          const optionsBox = document.createElement('div');
+          optionsBox.className = 'options';
+
+          options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.textContent = opt;
+            btn.addEventListener('click', () => {
+              const isRight = opt === q.correct;
+              [...optionsBox.children].forEach(b => {
+                b.disabled = true;
+                if (b.textContent === q.correct) b.classList.add('correct');
+              });
+              if (isRight) {
+                score++;
+                feedback.textContent = 'Correct! 🎉';
+                feedback.className = 'feedback ok';
+              } else {
+                btn.classList.add('wrong');
+                feedback.textContent = 'Oops! The right answer is: ' + q.correct;
+                feedback.className = 'feedback fail';
+              }
+              const nextBtn = document.createElement('button');
+              nextBtn.textContent = 'Next →';
+              nextBtn.addEventListener('click', next);
+              card.appendChild(nextBtn);
+            });
+            optionsBox.appendChild(btn);
+          });
+          card.appendChild(optionsBox);
+        } else {
+          const answerInput = document.createElement('input');
+          answerInput.className = 'answer-input';
+          answerInput.placeholder = 'Your answer...';
+          const checkBtn = document.createElement('button');
+          checkBtn.textContent = 'Check';
+
+          function check() {
+            const answer = answerInput.value.trim().toLowerCase();
+            const correct = q.correct.trim().toLowerCase();
+            answerInput.disabled = true;
+            checkBtn.disabled = true;
+            if (answer === correct) {
+              score++;
+              feedback.textContent = 'Correct! 🎉';
+              feedback.className = 'feedback ok';
+            } else {
+              feedback.textContent = 'Oops! The right answer is: ' + q.correct;
+              feedback.className = 'feedback fail';
+            }
+            const nextBtn = document.createElement('button');
+            nextBtn.textContent = 'Next →';
+            nextBtn.addEventListener('click', next);
+            card.appendChild(nextBtn);
+          }
+
+          checkBtn.addEventListener('click', check);
+          answerInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !checkBtn.disabled) check();
+          });
+
+          card.appendChild(answerInput);
+          card.appendChild(checkBtn);
+        }
+
+        card.appendChild(feedback);
+        quizArea.appendChild(card);
+        const focusTarget = card.querySelector('.answer-input');
+        if (focusTarget) focusTarget.focus();
+      }
+
+      render();
+    });
+  </script>
+</body>
+</html>
