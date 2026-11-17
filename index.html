@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Vocab Trainer — English Course</title>
 
-  <!-- Иконки и PWA -->
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="favicon.ico" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
@@ -109,6 +108,7 @@
     #stats { font-weight: 600; color: #555; }
     .bar { height: 8px; background: #e0e0e0; border-radius: 4px; margin-top: 8px; overflow: hidden; }
     .bar > div { height: 100%; background: #1a73e8; width: 0; transition: width 0.3s; }
+    .hint { font-size: 13px; color: #777; margin-top: 6px; }
   </style>
 </head>
 <body>
@@ -118,6 +118,7 @@
     <section>
       <h2>1. Load photo &amp; OCR</h2>
       <input type="file" id="photo-input" accept="image/*" />
+      <p class="hint">Совет: снимай ТОЛЬКО таблицу со словами, крупно и ровно (сверху вниз, без наклона и тени). Чем чище кадр — тем точнее распознавание.</p>
       <img id="photo-preview" alt="preview" />
       <p id="status-msg"></p>
       <textarea id="raw-text" rows="6" placeholder="Recognized text will appear here (or paste text manually)"></textarea>
@@ -165,16 +166,50 @@
     }
 
     // ==================== 1. OCR ====================
+
+    // Предобработка: увеличиваем, делаем ч/б и повышаем контраст
+    function preprocessImage(file) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxW = 1600;
+          const scale = Math.min(1, maxW / img.width) * (img.width < 1000 ? 2 : 1);
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const d = imageData.data;
+          const contrast = 1.4; // >1 = контрастнее
+          for (let i = 0; i < d.length; i += 4) {
+            // ч/б
+            const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+            // контраст вокруг середины 128
+            let v = (gray - 128) * contrast + 128;
+            v = Math.max(0, Math.min(255, v));
+            d[i] = d[i + 1] = d[i + 2] = v;
+          }
+          ctx.putImageData(imageData, 0, 0);
+          resolve(canvas);
+        };
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
     input.addEventListener('change', async () => {
       const file = input.files[0];
       if (!file) return;
 
       preview.src = URL.createObjectURL(file);
       preview.style.display = 'block';
-      setStatus('Recognizing...');
+      setStatus('Preparing image...');
 
       try {
-        const { data: { text } } = await Tesseract.recognize(file, 'eng+rus', {
+        const canvas = await preprocessImage(file);
+        setStatus('Recognizing...');
+        const { data: { text } } = await Tesseract.recognize(canvas, 'eng+rus', {
           logger: m => {
             if (m.status === 'recognizing text') {
               setStatus('Progress: ' + Math.round(m.progress * 100) + '%');
@@ -182,12 +217,75 @@
           }
         });
         rawText.value = text;
-        setStatus('Done! Check the text, fix mistakes if needed, then press "Parse from text".');
+        const pairs = extractPairs(text);
+        setStatus('Done! Found ' + pairs.length + ' word pairs. Check the text, fix mistakes if needed, then press "Parse from text".');
       } catch (err) {
         console.error(err);
         setStatus('Error during recognition. Check console (F12).');
       }
     });
+
+    // ==================== УМНЫЙ ПАРСЕР СЛОВАРЯ ====================
+    // Оставляем ТОЛЬКО пары "английское — русское" и выбрасываем мусор
+
+    function cleanJunk(s) {
+      return s
+        .replace(/[^A-Za-zА-ЯЁа-яё'’()\-\s.,]/g, ' ') // убираем кракозябры
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function isMostlyLatin(s) {
+      const latin = (s.match(/[A-Za-z]/g) || []).length;
+      const cyr = (s.match(/[А-ЯЁа-яё]/g) || []).length;
+      return latin >= 2 && latin > cyr;
+    }
+
+    function isMostlyCyrillic(s) {
+      const latin = (s.match(/[A-Za-z]/g) || []).length;
+      const cyr = (s.match(/[А-ЯЁа-яё]/g) || []).length;
+      return cyr >= 2 && cyr > latin;
+    }
+
+    function extractPairs(text) {
+      const pairs = [];
+      const lines = text.split('\n');
+
+      lines.forEach(rawLine => {
+        const line = cleanJunk(rawLine);
+        if (line.length < 5) return;
+
+        let word = null;
+        let translation = null;
+
+        // Вариант 1: явный разделитель "слово - перевод"
+        let m = line.match(/^(.{2,50}?)\s*[-—–:]+\s*(.{2,60})$/);
+        if (m && isMostlyLatin(m[1]) && isMostlyCyrillic(m[2])) {
+          word = m[1].trim();
+          translation = m[2].trim();
+        }
+
+        // Вариант 2: без разделителя, просто "латиница кириллица" в одной строке
+        if (!word) {
+          m = line.match(/^([A-Za-z][A-Za-z'’()\-\s.]{1,49}?)\s+([А-ЯЁа-яё][А-ЯЁа-яё'’()\-\s,]{1,59})$/);
+          if (m && isMostlyLatin(m[1]) && isMostlyCyrillic(m[2])) {
+            word = m[1].trim();
+            translation = m[2].trim();
+          }
+        }
+
+        if (word && translation) {
+          // фильтр мусора: слишком длинные "слова" — это абзацы, пропускаем
+          if (word.split(' ').length > 5 || translation.split(' ').length > 5) return;
+          // фильтр одиночных обрывков типа "b", "l2", "сЗ"
+          if (!/[A-Za-z]{3,}/.test(word)) return;
+          if (!/[А-ЯЁа-яё]{3,}/.test(translation)) return;
+          pairs.push({ word, translation, example: '' });
+        }
+      });
+
+      return pairs;
+    }
 
     // ==================== 2. СЛОВАРЬ ====================
     let currentWords = JSON.parse(localStorage.getItem('vocab_list') || '[]');
@@ -246,30 +344,25 @@
         return;
       }
 
-      const lines = text.split('\n');
-      const foundWords = [];
-
-      lines.forEach(line => {
-        const trimmed = line.trim();
-        if (!trimmed) return;
-        const match = trimmed.match(/^(.+?)\s*[-—–:]\s*(.+)$/);
-        if (match) {
-          const word = match[1].trim();
-          const translation = match[2].trim();
-          if (word && translation) {
-            foundWords.push({ word, translation, example: '' });
-          }
-        }
-      });
+      const foundWords = extractPairs(text);
 
       if (foundWords.length === 0) {
-        setStatus('No pairs found. Format the text as "word - translation", one per line.');
+        setStatus('No word pairs found. Make sure the photo shows only the vocabulary table (format: "word - перевод", one per line).');
         return;
       }
 
-      currentWords = foundWords;
+      // дедупликация: одинаковые слова не дублируем
+      const seen = new Set();
+      const unique = foundWords.filter(p => {
+        const key = p.word.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      currentWords = unique;
       renderTable();
-      setStatus('Found ' + foundWords.length + ' words. Edit cells if needed, then "Save list".');
+      setStatus('Found ' + unique.length + ' words. Edit cells if needed, then "Save list".');
     });
 
     document.getElementById('add-row-btn').addEventListener('click', () => {
