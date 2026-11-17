@@ -1,540 +1,152 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Vocab Trainer — English Course</title>
-
-  <link rel="manifest" href="manifest.json" />
-  <link rel="icon" href="favicon.ico" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-  <meta name="theme-color" content="#1a73e8" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="Vocab" />
-
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #f0f2f5;
-      margin: 0;
-      padding: 20px;
-      color: #222;
-    }
-    .container { max-width: 800px; margin: 0 auto; }
-    h1 { color: #1a73e8; }
-    h2 { border-bottom: 2px solid #1a73e8; padding-bottom: 4px; }
-    section {
-      background: #fff;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 24px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-    textarea {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-family: monospace;
-    }
-    button {
-      background: #1a73e8;
-      color: #fff;
-      border: none;
-      padding: 10px 18px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      margin-right: 8px;
-      margin-top: 6px;
-    }
-    button:hover { background: #1557b0; }
-    button:disabled { background: #aaa; cursor: default; }
-    button.ghost {
-      background: #fff;
-      color: #1a73e8;
-      border: 1px solid #1a73e8;
-    }
-    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-    th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
-    th { background: #f5f7fa; }
-    td input {
-      width: 100%;
-      border: none;
-      background: transparent;
-      font-size: 14px;
-    }
-    td input:focus { outline: 2px solid #1a73e8; border-radius: 4px; }
-    td button { padding: 4px 10px; background: #e53935; }
-    #photo-preview { max-width: 300px; display: none; margin-top: 10px; border-radius: 8px; }
-    #status-msg { color: #1a73e8; font-weight: 600; min-height: 20px; }
-    .quiz-card {
-      border: 1px solid #ddd;
-      border-radius: 12px;
-      padding: 20px;
-      margin-top: 12px;
-      text-align: center;
-    }
-    .quiz-card .word { font-size: 28px; font-weight: 700; margin: 10px 0; }
-    .options { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
-    .options button {
-      background: #f0f4ff;
-      color: #222;
-      border: 1px solid #c9d6f0;
-      margin: 0;
-      padding: 12px;
-      font-size: 16px;
-    }
-    .options button:hover:not(:disabled) { background: #dce7fb; }
-    .options button.correct { background: #c8f2d4; border-color: #34a853; color: #1e7e34; }
-    .options button.wrong { background: #fdd; border-color: #e53935; color: #b71c1c; }
-    .feedback { font-weight: 700; margin-top: 12px; min-height: 24px; }
-    .feedback.ok { color: #2e7d32; }
-    .feedback.fail { color: #c62828; }
-    input.answer-input {
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 16px;
-      width: 100%;
-      max-width: 320px;
-      text-align: center;
-    }
-    .mode-row { margin-bottom: 10px; }
-    .mode-row label { margin-right: 12px; cursor: pointer; }
-    #stats { font-weight: 600; color: #555; }
-    .bar { height: 8px; background: #e0e0e0; border-radius: 4px; margin-top: 8px; overflow: hidden; }
-    .bar > div { height: 100%; background: #1a73e8; width: 0; transition: width 0.3s; }
-    .hint { font-size: 13px; color: #777; margin-top: 6px; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OCR — фото в текст</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 0 auto; padding: 16px;
+         background: #f5f6fa; color: #222; }
+  h1 { font-size: 22px; }
+  /* ---- ползунок режимов ---- */
+  .switch { display: flex; align-items: center; gap: 10px; margin: 16px 0;
+            background: #fff; padding: 12px 16px; border-radius: 14px;
+            box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .switch .label { font-weight: 600; user-select: none; }
+  .toggle { position: relative; width: 56px; height: 30px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; background: #c8cdd8; border-radius: 30px;
+            transition: background .2s; cursor: pointer; }
+  .slider::before { content: ''; position: absolute; width: 24px; height: 24px;
+            left: 3px; top: 3px; background: #fff; border-radius: 50%;
+            transition: transform .2s; }
+  .toggle input:checked + .slider { background: #7b5cf0; }
+  .toggle input:checked + .slider::before { transform: translateX(26px); }
+  #badge { font-size: 11px; background: #ffedd5; color: #c2560a; padding: 2px 8px;
+           border-radius: 8px; font-weight: 700; }
+  /* ---- остальное ---- */
+  input[type=file] { margin: 8px 0; width: 100%; }
+  button { padding: 14px 20px; font-size: 16px; border-radius: 12px; border: 0;
+           background: #4f6ef7; color: #fff; cursor: pointer; width: 100%; }
+  button:disabled { opacity: .5; }
+  #result { width: 100%; min-height: 180px; margin-top: 12px; border-radius: 10px;
+            padding: 10px; font-size: 15px; }
+  #status { color: #666; min-height: 22px; margin-top: 8px; font-size: 14px; }
+</style>
 </head>
 <body>
-  <div class="container">
-    <h1>Vocab Trainer — English Course</h1>
+<h1>📷 Фото → текст</h1>
 
-    <section>
-      <h2>1. Load photo &amp; OCR</h2>
-      <input type="file" id="photo-input" accept="image/*" />
-      <p class="hint">Совет: снимай ТОЛЬКО таблицу со словами, крупно и ровно (сверху вниз, без наклона и тени). Чем чище кадр — тем точнее распознавание.</p>
-      <img id="photo-preview" alt="preview" />
-      <p id="status-msg"></p>
-      <textarea id="raw-text" rows="6" placeholder="Recognized text will appear here (or paste text manually)"></textarea>
-    </section>
+<div class="switch">
+  <span class="label" id="labelBasic">Обычное</span>
+  <label class="toggle">
+    <input type="checkbox" id="modeToggle">
+    <span class="slider"></span>
+  </label>
+  <span class="label">Нейро</span>
+  <span id="badge">бета</span>
+</div>
 
-    <section>
-      <h2>2. Words list</h2>
-      <button id="parse-btn">Parse from text</button>
-      <button id="add-row-btn" class="ghost">Add row</button>
-      <table id="words-table">
-        <thead>
-          <tr><th>Word</th><th>Translation</th><th>Example</th><th></th></tr>
-        </thead>
-        <tbody id="words-tbody"></tbody>
-      </table>
-      <button id="save-list-btn">Save list</button>
-      <button id="clear-list-btn" class="ghost">Clear list</button>
-    </section>
+<input type="file" accept="image/*" capture="environment" id="photo">
+<button id="go">Распознать</button>
+<div id="status"></div>
+<textarea id="result" placeholder="Текст появится здесь..."></textarea>
 
-    <section>
-      <h2>3. Quiz</h2>
-      <div class="mode-row">
-        <label><input type="radio" name="direction" value="en-ru" checked /> Word → Translation</label>
-        <label><input type="radio" name="direction" value="ru-en" /> Translation → Word</label>
-        <label><input type="radio" name="mode" value="choice" checked /> Multiple choice</label>
-        <label><input type="radio" name="mode" value="typing" /> Typing</label>
-      </div>
-      <button id="start-quiz-btn">Start quiz</button>
-      <div id="quiz-area"></div>
-      <p id="stats"></p>
-      <div class="bar"><div id="progress-fill"></div></div>
-    </section>
-  </div>
+<script type="module">
+const statusEl = document.getElementById('status');
+const resultEl = document.getElementById('result');
+const photoEl  = document.getElementById('photo');
+const goBtn    = document.getElementById('go');
+const toggle   = document.getElementById('modeToggle');
+const badge    = document.getElementById('badge');
 
-  <script src="https://unpkg.com/tesseract.js@4.1.0/dist/tesseract.min.js"></script>
-  <script>
-    // ==================== ОБЩЕЕ ====================
-    const input = document.getElementById('photo-input');
-    const preview = document.getElementById('photo-preview');
-    const rawText = document.getElementById('raw-text');
-    const statusMsg = document.getElementById('status-msg');
+const isNeural = () => toggle.checked;
 
-    function setStatus(text) {
-      statusMsg.textContent = text;
+// ---------- нарезка листа на строчки ----------
+function sliceLines(img) {
+  const W = 600, H = 1200;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0, W, H);
+  const data = ctx.getImageData(0, 0, W, H).data;
+  const dark = new Array(H).fill(0);
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++)
+      if (data[(y * W + x) * 4] < 160) dark[y]++;
+
+  const spans = [];
+  let start = null;
+  for (let y = 0; y <= H; y++) {
+    const row = y < H && dark[y] > 3;
+    if (row && start === null) start = y;
+    else if (!row && start !== null) {
+      if (y - start >= 12) spans.push([start, y]);
+      start = null;
     }
+  }
+  return spans.map(([a, b]) => {
+    const top = a / H * img.height, bot = b / H * img.height;
+    const h = Math.max(32, Math.round((bot - top) / img.width * 384));
+    const lc = document.createElement('canvas');
+    lc.width = 384; lc.height = h;
+    lc.getContext('2d').drawImage(img, 0, top, img.width, bot - top, 0, 0, 384, h);
+    return lc;
+  });
+}
 
-    // ==================== 1. OCR ====================
+// ---------- ОБЫЧНОЕ: Tesseract ----------
+async function runBasic(file) {
+  statusEl.textContent = 'Обычное распознавание...';
+  const { createWorker } = await import(
+    'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js');
+  const worker = await createWorker('rus+eng');
+  const { data: { text } } = await worker.recognize(file);
+  await worker.terminate();
+  return text;
+}
 
-    // Предобработка: увеличиваем, делаем ч/б и повышаем контраст
-    function preprocessImage(file) {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => {
-          const maxW = 1600;
-          const scale = Math.min(1, maxW / img.width) * (img.width < 1000 ? 2 : 1);
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width * scale;
-          canvas.height = img.height * scale;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const d = imageData.data;
-          const contrast = 1.4; // >1 = контрастнее
-          for (let i = 0; i < d.length; i += 4) {
-            // ч/б
-            const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-            // контраст вокруг середины 128
-            let v = (gray - 128) * contrast + 128;
-            v = Math.max(0, Math.min(255, v));
-            d[i] = d[i + 1] = d[i + 2] = v;
-          }
-          ctx.putImageData(imageData, 0, 0);
-          resolve(canvas);
-        };
-        img.src = URL.createObjectURL(file);
-      });
-    }
-
-    input.addEventListener('change', async () => {
-      const file = input.files[0];
-      if (!file) return;
-
-      preview.src = URL.createObjectURL(file);
-      preview.style.display = 'block';
-      setStatus('Preparing image...');
-
-      try {
-        const canvas = await preprocessImage(file);
-        setStatus('Recognizing...');
-        const { data: { text } } = await Tesseract.recognize(canvas, 'eng+rus', {
-          logger: m => {
-            if (m.status === 'recognizing text') {
-              setStatus('Progress: ' + Math.round(m.progress * 100) + '%');
-            }
-          }
-        });
-        rawText.value = text;
-        const pairs = extractPairs(text);
-        setStatus('Done! Found ' + pairs.length + ' word pairs. Check the text, fix mistakes if needed, then press "Parse from text".');
-      } catch (err) {
-        console.error(err);
-        setStatus('Error during recognition. Check console (F12).');
-      }
+// ---------- НЕЙРО: TrOCR в браузере ----------
+let neuralPipe = null;
+async function runNeural(file) {
+  if (!neuralPipe) {
+    statusEl.textContent = 'Загружаю нейросеть (один раз, ~150 МБ)...';
+    const { pipeline, env } = await import(
+      'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');
+    env.allowLocalModels = false;
+    neuralPipe = await pipeline('image-to-text', 'Xenova/trocr-base-handwritten', {
+      progress_callback: p => {
+        if (p.progress) statusEl.textContent = `Загрузка модели: ${Math.round(p.progress)}%`;
+      },
     });
+  }
+  const img = await createImageBitmap(file);
+  const lines = sliceLines(img);
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    statusEl.textContent = `Нейро: строчка ${i + 1} из ${lines.length}`;
+    const r = await neuralPipe(lines[i], { max_new_tokens: 64 });
+    out.push(r[0].generated_text.trim());
+  }
+  return out.filter(Boolean).join('\n') || '(текст не найден)';
+}
 
-    // ==================== УМНЫЙ ПАРСЕР СЛОВАРЯ ====================
-    // Оставляем ТОЛЬКО пары "английское — русское" и выбрасываем мусор
-
-    function cleanJunk(s) {
-      return s
-        .replace(/[^A-Za-zА-ЯЁа-яё'’()\-\s.,]/g, ' ') // убираем кракозябры
-        .replace(/\s+/g, ' ')
-        .trim();
-    }
-
-    function isMostlyLatin(s) {
-      const latin = (s.match(/[A-Za-z]/g) || []).length;
-      const cyr = (s.match(/[А-ЯЁа-яё]/g) || []).length;
-      return latin >= 2 && latin > cyr;
-    }
-
-    function isMostlyCyrillic(s) {
-      const latin = (s.match(/[A-Za-z]/g) || []).length;
-      const cyr = (s.match(/[А-ЯЁа-яё]/g) || []).length;
-      return cyr >= 2 && cyr > latin;
-    }
-
-    function extractPairs(text) {
-      const pairs = [];
-      const lines = text.split('\n');
-
-      lines.forEach(rawLine => {
-        const line = cleanJunk(rawLine);
-        if (line.length < 5) return;
-
-        let word = null;
-        let translation = null;
-
-        // Вариант 1: явный разделитель "слово - перевод"
-        let m = line.match(/^(.{2,50}?)\s*[-—–:]+\s*(.{2,60})$/);
-        if (m && isMostlyLatin(m[1]) && isMostlyCyrillic(m[2])) {
-          word = m[1].trim();
-          translation = m[2].trim();
-        }
-
-        // Вариант 2: без разделителя, просто "латиница кириллица" в одной строке
-        if (!word) {
-          m = line.match(/^([A-Za-z][A-Za-z'’()\-\s.]{1,49}?)\s+([А-ЯЁа-яё][А-ЯЁа-яё'’()\-\s,]{1,59})$/);
-          if (m && isMostlyLatin(m[1]) && isMostlyCyrillic(m[2])) {
-            word = m[1].trim();
-            translation = m[2].trim();
-          }
-        }
-
-        if (word && translation) {
-          // фильтр мусора: слишком длинные "слова" — это абзацы, пропускаем
-          if (word.split(' ').length > 5 || translation.split(' ').length > 5) return;
-          // фильтр одиночных обрывков типа "b", "l2", "сЗ"
-          if (!/[A-Za-z]{3,}/.test(word)) return;
-          if (!/[А-ЯЁа-яё]{3,}/.test(translation)) return;
-          pairs.push({ word, translation, example: '' });
-        }
-      });
-
-      return pairs;
-    }
-
-    // ==================== 2. СЛОВАРЬ ====================
-    let currentWords = JSON.parse(localStorage.getItem('vocab_list') || '[]');
-    const tbody = document.getElementById('words-tbody');
-
-    function renderTable() {
-      tbody.innerHTML = '';
-      currentWords.forEach((item, index) => {
-        const tr = document.createElement('tr');
-
-        const tdWord = document.createElement('td');
-        const tdTrans = document.createElement('td');
-        const tdExample = document.createElement('td');
-        const tdDelete = document.createElement('td');
-
-        const wordInput = document.createElement('input');
-        wordInput.type = 'text';
-        wordInput.value = item.word;
-        wordInput.addEventListener('input', () => { currentWords[index].word = wordInput.value; });
-
-        const transInput = document.createElement('input');
-        transInput.type = 'text';
-        transInput.value = item.translation;
-        transInput.addEventListener('input', () => { currentWords[index].translation = transInput.value; });
-
-        const exampleInput = document.createElement('input');
-        exampleInput.type = 'text';
-        exampleInput.placeholder = 'Example sentence';
-        exampleInput.value = item.example || '';
-        exampleInput.addEventListener('input', () => { currentWords[index].example = exampleInput.value; });
-
-        const delBtn = document.createElement('button');
-        delBtn.textContent = 'X';
-        delBtn.addEventListener('click', () => {
-          currentWords.splice(index, 1);
-          renderTable();
-        });
-
-        tdWord.appendChild(wordInput);
-        tdTrans.appendChild(transInput);
-        tdExample.appendChild(exampleInput);
-        tdDelete.appendChild(delBtn);
-
-        tr.appendChild(tdWord);
-        tr.appendChild(tdTrans);
-        tr.appendChild(tdExample);
-        tr.appendChild(tdDelete);
-        tbody.appendChild(tr);
-      });
-    }
-
-    document.getElementById('parse-btn').addEventListener('click', () => {
-      const text = rawText.value;
-      if (!text.trim()) {
-        setStatus('Load a photo or paste text first!');
-        return;
-      }
-
-      const foundWords = extractPairs(text);
-
-      if (foundWords.length === 0) {
-        setStatus('No word pairs found. Make sure the photo shows only the vocabulary table (format: "word - перевод", one per line).');
-        return;
-      }
-
-      // дедупликация: одинаковые слова не дублируем
-      const seen = new Set();
-      const unique = foundWords.filter(p => {
-        const key = p.word.toLowerCase();
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-
-      currentWords = unique;
-      renderTable();
-      setStatus('Found ' + unique.length + ' words. Edit cells if needed, then "Save list".');
-    });
-
-    document.getElementById('add-row-btn').addEventListener('click', () => {
-      currentWords.push({ word: '', translation: '', example: '' });
-      renderTable();
-    });
-
-    document.getElementById('save-list-btn').addEventListener('click', () => {
-      localStorage.setItem('vocab_list', JSON.stringify(currentWords));
-      setStatus('List saved (' + currentWords.length + ' words). It will stay after page reload.');
-    });
-
-    document.getElementById('clear-list-btn').addEventListener('click', () => {
-      if (confirm('Delete all words?')) {
-        currentWords = [];
-        localStorage.removeItem('vocab_list');
-        renderTable();
-        setStatus('List cleared.');
-      }
-    });
-
-    renderTable();
-
-    // ==================== 3. КВИЗ ====================
-    const quizArea = document.getElementById('quiz-area');
-    const stats = document.getElementById('stats');
-    const progressFill = document.getElementById('progress-fill');
-
-    function shuffle(arr) {
-      const a = [...arr];
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
-    }
-
-    document.getElementById('start-quiz-btn').addEventListener('click', () => {
-      const validWords = currentWords.filter(w => w.word && w.translation);
-      if (validWords.length < 4) {
-        setStatus('Need at least 4 words with translation for the quiz!');
-        return;
-      }
-
-      const direction = document.querySelector('input[name="direction"]:checked').value;
-      const mode = document.querySelector('input[name="mode"]:checked').value;
-      const shuffled = shuffle(validWords);
-      let currentIndex = 0;
-      let score = 0;
-
-      function question() {
-        return direction === 'en-ru'
-          ? { prompt: shuffled[currentIndex].word, correct: shuffled[currentIndex].translation }
-          : { prompt: shuffled[currentIndex].translation, correct: shuffled[currentIndex].word };
-      }
-
-      function showProgress() {
-        stats.textContent = 'Progress: ' + (currentIndex + 1) + ' / ' + shuffled.length + ' | Score: ' + score;
-        progressFill.style.width = ((currentIndex) / shuffled.length * 100) + '%';
-      }
-
-      function finish() {
-        progressFill.style.width = '100%';
-        quizArea.innerHTML =
-          '<div class="quiz-card"><h3>Quiz finished!</h3>' +
-          '<p>Score: ' + score + ' / ' + shuffled.length + '</p>' +
-          '<p>' + (score === shuffled.length ? 'Perfect! 🎉' : 'Good job! Try again to improve your score.') + '</p></div>';
-        stats.textContent = '';
-      }
-
-      function next() {
-        currentIndex++;
-        if (currentIndex >= shuffled.length) finish();
-        else render();
-      }
-
-      function render() {
-        quizArea.innerHTML = '';
-        showProgress();
-        const q = question();
-        const card = document.createElement('div');
-        card.className = 'quiz-card';
-
-        const label = document.createElement('div');
-        label.textContent = mode === 'choice'
-          ? 'Choose the correct answer:'
-          : 'Type the translation:';
-        const wordEl = document.createElement('div');
-        wordEl.className = 'word';
-        wordEl.textContent = q.prompt;
-        card.appendChild(label);
-        card.appendChild(wordEl);
-
-        const feedback = document.createElement('p');
-        feedback.className = 'feedback';
-
-        if (mode === 'choice') {
-          const wrongs = shuffle(validWords.filter(w => w !== shuffled[currentIndex])).slice(0, 3);
-          const options = shuffle([q.correct, ...wrongs.map(w => direction === 'en-ru' ? w.translation : w.word)]);
-
-          const optionsBox = document.createElement('div');
-          optionsBox.className = 'options';
-
-          options.forEach(opt => {
-            const btn = document.createElement('button');
-            btn.textContent = opt;
-            btn.addEventListener('click', () => {
-              const isRight = opt === q.correct;
-              [...optionsBox.children].forEach(b => {
-                b.disabled = true;
-                if (b.textContent === q.correct) b.classList.add('correct');
-              });
-              if (isRight) {
-                score++;
-                feedback.textContent = 'Correct! 🎉';
-                feedback.className = 'feedback ok';
-              } else {
-                btn.classList.add('wrong');
-                feedback.textContent = 'Oops! The right answer is: ' + q.correct;
-                feedback.className = 'feedback fail';
-              }
-              const nextBtn = document.createElement('button');
-              nextBtn.textContent = 'Next →';
-              nextBtn.addEventListener('click', next);
-              card.appendChild(nextBtn);
-            });
-            optionsBox.appendChild(btn);
-          });
-          card.appendChild(optionsBox);
-        } else {
-          const answerInput = document.createElement('input');
-          answerInput.className = 'answer-input';
-          answerInput.placeholder = 'Your answer...';
-          const checkBtn = document.createElement('button');
-          checkBtn.textContent = 'Check';
-
-          function check() {
-            const answer = answerInput.value.trim().toLowerCase();
-            const correct = q.correct.trim().toLowerCase();
-            answerInput.disabled = true;
-            checkBtn.disabled = true;
-            if (answer === correct) {
-              score++;
-              feedback.textContent = 'Correct! 🎉';
-              feedback.className = 'feedback ok';
-            } else {
-              feedback.textContent = 'Oops! The right answer is: ' + q.correct;
-              feedback.className = 'feedback fail';
-            }
-            const nextBtn = document.createElement('button');
-            nextBtn.textContent = 'Next →';
-            nextBtn.addEventListener('click', next);
-            card.appendChild(nextBtn);
-          }
-
-          checkBtn.addEventListener('click', check);
-          answerInput.addEventListener('keydown', e => {
-            if (e.key === 'Enter' && !checkBtn.disabled) check();
-          });
-
-          card.appendChild(answerInput);
-          card.appendChild(checkBtn);
-        }
-
-        card.appendChild(feedback);
-        quizArea.appendChild(card);
-        const focusTarget = card.querySelector('.answer-input');
-        if (focusTarget) focusTarget.focus();
-      }
-
-      render();
-    });
-  </script>
+// ---------- кнопка ----------
+goBtn.addEventListener('click', async () => {
+  const file = photoEl.files[0];
+  if (!file) { statusEl.textContent = 'Сначала выбери фото 📷'; return; }
+  goBtn.disabled = true;
+  resultEl.value = '';
+  try {
+    resultEl.value = isNeural() ? await runNeural(file) : await runBasic(file);
+    statusEl.textContent = 'Готово ✅';
+  } catch (e) {
+    statusEl.textContent = 'Ошибка: ' + e.message;
+  } finally {
+    goBtn.disabled = false;
+  }
+});
+</script>
 </body>
 </html>
