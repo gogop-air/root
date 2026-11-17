@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OCR — фото в текст</title>
 <link rel="manifest" href="manifest.json">
+<!-- Tesseract классическим скриптом — надёжнее, чем ESM-импорт -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 640px; margin: 0 auto; padding: 16px;
          background: #f5f6fa; color: #222; }
@@ -24,11 +26,14 @@
   .toggle input:checked + .slider::before { transform: translateX(26px); }
   #badge { font-size: 11px; background: #ffedd5; color: #c2560a; padding: 2px 8px;
            border-radius: 8px; font-weight: 700; }
+  .tabs { display: flex; gap: 8px; margin-top: 8px; }
+  .tab { background: #fff; color: #333; font-weight: 700; }
+  .tab.active { background: #4f6ef7; color: #fff; }
   input[type=file] { margin: 8px 0; width: 100%; }
   button { padding: 14px 20px; font-size: 16px; border-radius: 12px; border: 0;
            background: #4f6ef7; color: #fff; cursor: pointer; width: 100%; }
   button:disabled { opacity: .5; }
-  #result { width: 100%; min-height: 180px; margin-top: 12px; border-radius: 10px;
+  #result, #manualText { width: 100%; min-height: 180px; margin-top: 12px; border-radius: 10px;
             padding: 10px; font-size: 15px; }
   #status { color: #666; min-height: 22px; margin-top: 8px; font-size: 14px; }
   .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
@@ -53,7 +58,6 @@
            border-radius: 10px; border: 1px solid #ddd; background: #fafafa; cursor: pointer; }
   .q-opt.ok  { background: #d4f7d4; border-color: #4caf50; }
   .q-opt.bad { background: #ffd6d6; border-color: #e53935; }
-  /* ---- диаграмма ---- */
   .res-card { background: #fff; border-radius: 14px; padding: 18px; margin: 12px 0;
               box-shadow: 0 1px 4px rgba(0,0,0,.12); }
   .res-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
@@ -88,8 +92,21 @@
   <span id="badge">бета</span>
 </div>
 
-<input type="file" accept="image/*" capture="environment" id="photo">
-<button id="go">Распознать</button>
+<div class="tabs">
+  <button class="mini tab active" id="tabPhoto">📷 Фото</button>
+  <button class="mini tab" id="tabText">⌨️ Вставить текст</button>
+</div>
+
+<div id="photoSection">
+  <input type="file" accept="image/*" capture="environment" id="photo">
+  <button id="go">Распознать</button>
+</div>
+
+<div id="textSection" style="display:none">
+  <textarea id="manualText" placeholder="Вставь или напиши текст здесь — сделаю словарик и викторину без фото..."></textarea>
+  <button id="goText">📚 Слова из текста</button>
+</div>
+
 <div id="status"></div>
 
 <div class="actions">
@@ -124,6 +141,56 @@ const toggle   = document.getElementById('modeToggle');
 
 const isNeural = () => toggle.checked;
 
+// ---------- табы: фото / текст ----------
+const tabPhoto = document.getElementById('tabPhoto');
+const tabText  = document.getElementById('tabText');
+tabPhoto.addEventListener('click', () => {
+  tabPhoto.classList.add('active'); tabText.classList.remove('active');
+  document.getElementById('photoSection').style.display = 'block';
+  document.getElementById('textSection').style.display = 'none';
+});
+tabText.addEventListener('click', () => {
+  tabText.classList.add('active'); tabPhoto.classList.remove('active');
+  document.getElementById('photoSection').style.display = 'none';
+  document.getElementById('textSection').style.display = 'block';
+});
+
+document.getElementById('goText').addEventListener('click', () => {
+  const t = document.getElementById('manualText').value.trim();
+  if (!t) { statusEl.textContent = 'Сначала вставь текст ✍️'; return; }
+  resultEl.value = t;
+  saveHistory(t, 'текст');
+  buildTable(t);
+});
+
+// ---------- предобработка фото: серый + контраст + увеличение ----------
+async function preprocess(file) {
+  const img = await createImageBitmap(file);
+  const scale = Math.min(2, Math.max(1, 1600 / img.width));
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.width * scale);
+  c.height = Math.round(img.height * scale);
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  const d = ctx.getImageData(0, 0, c.width, c.height);
+  const n = d.data.length / 4;
+  const gray = new Float32Array(n);
+  let min = 255, max = 0;
+  for (let i = 0; i < n; i++) {
+    const g = 0.299 * d.data[i*4] + 0.587 * d.data[i*4+1] + 0.114 * d.data[i*4+2];
+    gray[i] = g;
+    if (g < min) min = g;
+    if (g > max) max = g;
+  }
+  const range = Math.max(1, max - min);
+  for (let i = 0; i < n; i++) {
+    const v = (gray[i] - min) / range * 255;
+    d.data[i*4] = d.data[i*4+1] = d.data[i*4+2] = v;
+  }
+  ctx.putImageData(d, 0, 0);
+  return c;
+}
+
 // ---------- нарезка листа на строчки ----------
 function sliceLines(img) {
   const W = 600, H = 1200;
@@ -157,14 +224,19 @@ function sliceLines(img) {
   });
 }
 
-// ---------- ОБЫЧНОЕ: Tesseract ----------
+// ---------- ОБЫЧНОЕ: Tesseract (глобальный скрипт) ----------
 async function runBasic(file) {
+  if (typeof Tesseract === 'undefined')
+    throw new Error('Tesseract не загрузился — проверь интернет и перезагрузи страницу');
+  statusEl.textContent = 'Подготовка фото...';
+  const canvas = await preprocess(file);
   statusEl.textContent = 'Обычное распознавание...';
-  const { createWorker } = await import(
-    'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js');
-  const worker = await createWorker('rus+eng');
-  const { data: { text } } = await worker.recognize(file);
-  await worker.terminate();
+  const { data: { text } } = await Tesseract.recognize(canvas, 'eng+rus', {
+    logger: m => {
+      if (m.status === 'recognizing text')
+        statusEl.textContent = `Обычное: ${Math.round(m.progress * 100)}%`;
+    },
+  });
   return text;
 }
 
@@ -219,7 +291,8 @@ renderHistory();
 
 // ---------- словарь ----------
 const STOP = new Set(['и','в','на','с','а','но','не','что','как','это','для','он','она',
-  'они','мы','вы','the','and','a','an','of','to','is','are','in','on','it','was','were']);
+  'они','мы','вы','the','and','a','an','of','to','is','are','in','on','it','was','were',
+  'you','your','for','if','or','so','as','be','to','etc','model']);
 
 function extractWords(text) {
   const raw = (text.toLowerCase().match(/[a-zа-яё][a-zа-яё-]{2,}/g) || []);
@@ -239,7 +312,7 @@ async function translateWord(w) {
   return (t && !t.includes('MYMEMORY WARNING')) ? t : '—';
 }
 
-let wordPairs = [];   // [{word, tr}]
+let wordPairs = [];
 
 async function buildTable(text) {
   const words = extractWords(text);
@@ -268,11 +341,10 @@ function startQuiz(pairs) {
   const box = document.getElementById('quizBox');
   box.innerHTML = '';
   let score = 0;
-  const answered = [];   // [{pair, correct}]
+  const answered = [];
   const questions = shuffle(pairs).slice(0, 10);
 
   questions.forEach((q, qi) => {
-    // дистракторы: из всего словарика, чтобы вариантов всегда хватало
     const others = shuffle(wordPairs.filter(p => p.tr !== q.tr && p.tr !== '—')).slice(0, 3);
     const opts = shuffle([q.tr, ...others.map(p => p.tr)]);
     const card = document.createElement('div');
@@ -306,6 +378,7 @@ function showResults(answered) {
   const total = answered.length;
   const pct = Math.round((total - wrong.length) / total * 100);
 
+  box.querySelectorAll('.res-card').forEach(el => el.remove());
   const card = document.createElement('div');
   card.className = 'res-card';
 
@@ -344,8 +417,6 @@ function showResults(answered) {
       <button class="mini btn-go" id="goBroBtn">Давай броооу!</button>
     </div>` : ''}`;
 
-  // убрать старый блок результатов, если был
-  box.querySelectorAll('.res-card').forEach(el => el.remove());
   box.appendChild(card);
   card.scrollIntoView({ behavior: 'smooth' });
 
