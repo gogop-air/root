@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OCR — фото в текст</title>
 <link rel="manifest" href="manifest.json">
-<!-- Tesseract классическим скриптом — надёжнее, чем ESM-импорт -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 640px; margin: 0 auto; padding: 16px;
          background: #f5f6fa; color: #222; }
@@ -104,7 +103,10 @@
 
 <div id="textSection" style="display:none">
   <textarea id="manualText" placeholder="Вставь или напиши текст здесь — сделаю словарик и викторину без фото..."></textarea>
-  <button id="goText">📚 Слова из текста</button>
+  <div class="actions">
+    <button class="mini" id="goText">📚 Слова из текста</button>
+    <button class="mini" id="quizTextBtn" style="background:#7b5cf0;color:#fff">🎯 Викторина из текста</button>
+  </div>
 </div>
 
 <div id="status"></div>
@@ -155,15 +157,7 @@ tabText.addEventListener('click', () => {
   document.getElementById('textSection').style.display = 'block';
 });
 
-document.getElementById('goText').addEventListener('click', () => {
-  const t = document.getElementById('manualText').value.trim();
-  if (!t) { statusEl.textContent = 'Сначала вставь текст ✍️'; return; }
-  resultEl.value = t;
-  saveHistory(t, 'текст');
-  buildTable(t);
-});
-
-// ---------- предобработка фото: серый + контраст + увеличение ----------
+// ---------- предобработка фото ----------
 async function preprocess(file) {
   const img = await createImageBitmap(file);
   const scale = Math.min(2, Math.max(1, 1600 / img.width));
@@ -224,20 +218,20 @@ function sliceLines(img) {
   });
 }
 
-// ---------- ОБЫЧНОЕ: Tesseract (глобальный скрипт) ----------
+// ---------- ОБЫЧНОЕ: Tesseract ----------
 async function runBasic(file) {
   if (typeof Tesseract === 'undefined')
-    throw new Error('Tesseract не загрузился — проверь интернет и перезагрузи страницу');
+    throw new Error('Tesseract не загрузился — перезагрузи страницу (Ctrl+F5)');
   statusEl.textContent = 'Подготовка фото...';
   const canvas = await preprocess(file);
   statusEl.textContent = 'Обычное распознавание...';
-  const { data: { text } } = await Tesseract.recognize(canvas, 'eng+rus', {
+  const result = await Tesseract.recognize(canvas, 'eng+rus', {
     logger: m => {
       if (m.status === 'recognizing text')
         statusEl.textContent = `Обычное: ${Math.round(m.progress * 100)}%`;
     },
   });
-  return text;
+  return result.data.text;
 }
 
 // ---------- НЕЙРО: TrOCR в браузере ----------
@@ -292,7 +286,7 @@ renderHistory();
 // ---------- словарь ----------
 const STOP = new Set(['и','в','на','с','а','но','не','что','как','это','для','он','она',
   'они','мы','вы','the','and','a','an','of','to','is','are','in','on','it','was','were',
-  'you','your','for','if','or','so','as','be','to','etc','model']);
+  'you','your','for','if','or','so','as','be','etc','model','use','buy']);
 
 function extractWords(text) {
   const raw = (text.toLowerCase().match(/[a-zа-яё][a-zа-яё-]{2,}/g) || []);
@@ -340,7 +334,6 @@ function startQuiz(pairs) {
   document.getElementById('quizSection').style.display = 'block';
   const box = document.getElementById('quizBox');
   box.innerHTML = '';
-  let score = 0;
   const answered = [];
   const questions = shuffle(pairs).slice(0, 10);
 
@@ -357,7 +350,7 @@ function startQuiz(pairs) {
         if (done) return;
         done = true;
         const correct = btn.textContent === q.tr;
-        if (correct) { btn.classList.add('ok'); score++; }
+        if (correct) btn.classList.add('ok');
         else {
           btn.classList.add('bad');
           card.querySelectorAll('.q-opt').forEach(b =>
@@ -371,7 +364,7 @@ function startQuiz(pairs) {
   });
 }
 
-// ---------- результаты: диаграмма + подтянуть + диалог ----------
+// ---------- результаты ----------
 function showResults(answered) {
   const box = document.getElementById('quizBox');
   const wrong = answered.filter(a => !a.correct);
@@ -430,6 +423,26 @@ function showResults(answered) {
 }
 
 document.getElementById('quizBtn').addEventListener('click', () => startQuiz(wordPairs));
+
+// ---------- текстовая вкладка ----------
+document.getElementById('goText').addEventListener('click', () => {
+  const t = document.getElementById('manualText').value.trim();
+  if (!t) { statusEl.textContent = 'Сначала вставь текст ✍️'; return; }
+  resultEl.value = t;
+  saveHistory(t, 'текст');
+  buildTable(t);
+});
+
+document.getElementById('quizTextBtn').addEventListener('click', async () => {
+  const t = document.getElementById('manualText').value.trim();
+  if (!t) { statusEl.textContent = 'Сначала вставь текст ✍️'; return; }
+  if (!wordPairs.length) {
+    await buildTable(t);
+    if (!wordPairs.length) return;
+  }
+  document.getElementById('quizSection').style.display = 'block';
+  startQuiz(wordPairs);
+});
 
 // ---------- кнопки действия ----------
 document.getElementById('copyBtn').addEventListener('click', async () => {
