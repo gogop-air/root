@@ -1,500 +1,762 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OCR — фото в текст</title>
-<link rel="manifest" href="manifest.json">
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
-<style>
-  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 0 auto; padding: 16px;
-         background: #f5f6fa; color: #222; }
-  h1 { font-size: 22px; }
-  .switch { display: flex; align-items: center; gap: 10px; margin: 16px 0;
-            background: #fff; padding: 12px 16px; border-radius: 14px;
-            box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-  .switch .label { font-weight: 600; user-select: none; }
-  .toggle { position: relative; width: 56px; height: 30px; flex-shrink: 0; }
-  .toggle input { opacity: 0; width: 0; height: 0; }
-  .slider { position: absolute; inset: 0; background: #c8cdd8; border-radius: 30px;
-            transition: background .2s; cursor: pointer; }
-  .slider::before { content: ''; position: absolute; width: 24px; height: 24px;
-            left: 3px; top: 3px; background: #fff; border-radius: 50%;
-            transition: transform .2s; }
-  .toggle input:checked + .slider { background: #7b5cf0; }
-  .toggle input:checked + .slider::before { transform: translateX(26px); }
-  #badge { font-size: 11px; background: #ffedd5; color: #c2560a; padding: 2px 8px;
-           border-radius: 8px; font-weight: 700; }
-  .tabs { display: flex; gap: 8px; margin-top: 8px; }
-  .tab { background: #fff; color: #333; font-weight: 700; }
-  .tab.active { background: #4f6ef7; color: #fff; }
-  input[type=file] { margin: 8px 0; width: 100%; }
-  button { padding: 14px 20px; font-size: 16px; border-radius: 12px; border: 0;
-           background: #4f6ef7; color: #fff; cursor: pointer; width: 100%; }
-  button:disabled { opacity: .5; }
-  #result, #manualText { width: 100%; min-height: 180px; margin-top: 12px; border-radius: 10px;
-            padding: 10px; font-size: 15px; }
-  #status { color: #666; min-height: 22px; margin-top: 8px; font-size: 14px; }
-  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-  .mini { padding: 10px; font-size: 14px; background: #fff; color: #333;
-          border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.1); width: 100%; }
-  .mini:disabled { opacity: .4; }
-  .history-toggle { margin-top: 14px; background: #eef; }
-  #historyList { margin-top: 8px; }
-  .hist-item { background: #fff; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
-               cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-  .hist-item .txt { font-size: 13px; color: #444; white-space: nowrap;
-                    overflow: hidden; text-overflow: ellipsis; }
-  .hist-item .date { font-size: 11px; color: #999; }
-  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px;
-          overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
-  td, th { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 15px; text-align: left; }
-  th { background: #f0f1f7; font-size: 13px; }
-  .q-card { background: #fff; border-radius: 12px; padding: 16px; margin: 10px 0;
-            box-shadow: 0 1px 3px rgba(0,0,0,.1); }
-  .q-word { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
-  .q-opt { display: block; width: 100%; margin: 6px 0; padding: 12px; font-size: 15px;
-           border-radius: 10px; border: 1px solid #ddd; background: #fafafa; cursor: pointer; }
-  .q-opt.ok  { background: #d4f7d4; border-color: #4caf50; }
-  .q-opt.bad { background: #ffd6d6; border-color: #e53935; }
-  .res-card { background: #fff; border-radius: 14px; padding: 18px; margin: 12px 0;
-              box-shadow: 0 1px 4px rgba(0,0,0,.12); }
-  .res-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
-  .res-score { font-size: 26px; font-weight: 800; }
-  .chart { margin: 12px 0; }
-  .chart-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
-  .chart-word { width: 90px; font-size: 13px; overflow: hidden; text-overflow: ellipsis;
-                white-space: nowrap; }
-  .chart-bar { flex: 1; height: 18px; background: #eee; border-radius: 9px; overflow: hidden; }
-  .chart-fill { height: 100%; border-radius: 9px; transition: width .5s; }
-  .chart-fill.good { background: #4caf50; }
-  .chart-fill.bad  { background: #e53935; }
-  .chart-stat { width: 58px; font-size: 12px; color: #666; text-align: right; }
-  .summary { font-size: 14px; background: #f6f7ff; border-radius: 10px; padding: 12px; }
-  .summary b { color: #c2560a; }
-  .dialog-btns { display: flex; gap: 8px; margin-top: 14px; }
-  .dialog-btns .mini { font-weight: 700; }
-  .btn-stay { background: #eee !important; color: #333 !important; box-shadow: none; }
-  .btn-go { background: #7b5cf0 !important; color: #fff !important; box-shadow: none; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vocab Trainer — English Course</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="favicon.ico" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="theme-color" content="#1a73e8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Vocab" />
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+      color: #222;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { color: #1a73e8; }
+    h2 { border-bottom: 2px solid #1a73e8; padding-bottom: 4px; }
+    section {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-family: monospace;
+    }
+    button {
+      background: #1a73e8;
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 8px;
+      margin-top: 6px;
+    }
+    button:hover { background: #1557b0; }
+    button:disabled { background: #aaa; cursor: default; }
+    button.ghost {
+      background: #fff;
+      color: #1a73e8;
+      border: 1px solid #1a73e8;
+    }
+    button.purple { background: #7b5cf0; }
+    button.purple:hover { background: #5f43d6; }
+
+    /* ДВУХКОЛОНОЧНАЯ ТАБЛИЦА СЛОВ */
+    #words-table {
+      width: 100%;
+      table-layout: fixed;
+      border-collapse: collapse;
+      margin: 10px 0;
+    }
+    #words-table th {
+      border: 1px solid #ddd;
+      padding: 8px;
+      background: #f5f7fa;
+      font-size: 14px;
+      text-align: left;
+    }
+    #words-table td {
+      border: 1px solid #ddd;
+      padding: 4px 6px;
+      vertical-align: middle;
+    }
+    #words-table td input {
+      width: 100%;
+      border: none;
+      background: transparent;
+      font-size: 15px;
+      word-break: break-word;
+    }
+    #words-table td input:focus { outline: 2px solid #1a73e8; border-radius: 4px; }
+    #words-table td button { padding: 4px 10px; background: #e53935; margin: 0; }
+    #words-table th:nth-child(1), #words-table td:nth-child(1) { width: 35%; }
+    #words-table th:nth-child(2), #words-table td:nth-child(2) { width: 35%; }
+    #words-table th:nth-child(3), #words-table td:nth-child(3) { width: 22%; }
+    #words-table th:nth-child(4), #words-table td:nth-child(4) { width: 8%; text-align: center; }
+
+    #photo-preview { max-width: 300px; display: none; margin-top: 10px; border-radius: 8px; }
+    #status-msg { color: #1a73e8; font-weight: 600; min-height: 20px; }
+
+    .mode-switch { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+    .mode-switch .label { font-weight: 600; }
+    .toggle { position: relative; width: 56px; height: 30px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider-t { position: absolute; inset: 0; background: #c8cdd8; border-radius: 30px;
+                transition: background .2s; cursor: pointer; }
+    .slider-t::before { content: ''; position: absolute; width: 24px; height: 24px;
+                left: 3px; top: 3px; background: #fff; border-radius: 50%;
+                transition: transform .2s; }
+    .toggle input:checked + .slider-t { background: #7b5cf0; }
+    .toggle input:checked + .slider-t::before { transform: translateX(26px); }
+    .beta-badge { font-size: 11px; background: #ffedd5; color: #c2560a; padding: 2px 8px;
+                  border-radius: 8px; font-weight: 700; }
+
+    .quiz-card {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 12px;
+      text-align: center;
+    }
+    .quiz-card .word { font-size: 28px; font-weight: 700; margin: 10px 0; }
+    .options { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+    .options button {
+      background: #f0f4ff;
+      color: #222;
+      border: 1px solid #c9d6f0;
+      margin: 0;
+      padding: 12px;
+      font-size: 16px;
+    }
+    .options button:hover:not(:disabled) { background: #dce7fb; }
+    .options button.correct { background: #c8f2d4; border-color: #34a853; color: #1e7e34; }
+    .options button.wrong { background: #fdd; border-color: #e53935; color: #b71c1c; }
+    .feedback { font-weight: 700; margin-top: 12px; min-height: 24px; }
+    .feedback.ok { color: #2e7d32; }
+    .feedback.fail { color: #c62828; }
+    input.answer-input {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+      width: 100%;
+      max-width: 320px;
+      text-align: center;
+    }
+    .mode-row { margin-bottom: 10px; }
+    .mode-row label { margin-right: 12px; cursor: pointer; }
+    #stats { font-weight: 600; color: #555; }
+    .bar { height: 8px; background: #e0e0e0; border-radius: 4px; margin-top: 8px; overflow: hidden; }
+    .bar > div { height: 100%; background: #1a73e8; width: 0; transition: width 0.3s; }
+    .hint { font-size: 13px; color: #777; margin-top: 6px; }
+
+    .res-card { text-align: left; }
+    .res-score { font-size: 24px; font-weight: 800; }
+    .chart { margin: 12px 0; }
+    .chart-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+    .chart-word { width: 110px; font-size: 13px; overflow: hidden; text-overflow: ellipsis;
+                  white-space: nowrap; }
+    .chart-bar { flex: 1; height: 16px; background: #eee; border-radius: 8px; overflow: hidden; }
+    .chart-fill { height: 100%; border-radius: 8px; transition: width .5s; }
+    .chart-fill.good { background: #34a853; }
+    .chart-fill.bad  { background: #e53935; }
+    .chart-stat { width: 60px; font-size: 12px; color: #666; text-align: right; }
+    .summary { font-size: 14px; background: #f6f7ff; border-radius: 10px; padding: 12px; margin-top: 10px; }
+    .dialog-btns { display: flex; gap: 8px; margin-top: 14px; justify-content: center; }
+  </style>
 </head>
 <body>
-<h1>📷 Фото → текст</h1>
+  <div class="container">
+    <h1>Vocab Trainer — English Course</h1>
 
-<div class="switch">
-  <span class="label" id="labelBasic">Обычное</span>
-  <label class="toggle">
-    <input type="checkbox" id="modeToggle">
-    <span class="slider"></span>
-  </label>
-  <span class="label">Нейро</span>
-  <span id="badge">бета</span>
-</div>
+    <section>
+      <h2>1. Load photo &amp; OCR</h2>
+      <div class="mode-switch">
+        <span class="label">Обычное</span>
+        <label class="toggle">
+          <input type="checkbox" id="neural-mode" />
+          <span class="slider-t"></span>
+        </label>
+        <span class="label">Нейро</span>
+        <span class="beta-badge">бета</span>
+      </div>
+      <input type="file" id="photo-input" accept="image/*" />
+      <p class="hint">Совет: снимай ТОЛЬКО таблицу со словами, крупно и ровно (сверху вниз, без наклона и тени). Чем чище кадр — тем точнее распознавание.</p>
+      <img id="photo-preview" alt="preview" />
+      <p id="status-msg"></p>
+      <textarea id="raw-text" rows="6" placeholder="Recognized text will appear here (or paste text manually)"></textarea>
+    </section>
 
-<div class="tabs">
-  <button class="mini tab active" id="tabPhoto">📷 Фото</button>
-  <button class="mini tab" id="tabText">⌨️ Вставить текст</button>
-</div>
+    <section>
+      <h2>2. Words list</h2>
+      <button id="parse-btn">Parse from text</button>
+      <button id="autotr-btn" class="ghost">Auto-translate 🌐</button>
+      <button id="add-row-btn" class="ghost">Add row</button>
+      <table id="words-table">
+        <thead>
+          <tr><th>Word</th><th>Translation</th><th>Example</th><th></th></tr>
+        </thead>
+        <tbody id="words-tbody"></tbody>
+      </table>
+      <button id="save-list-btn">Save list</button>
+      <button id="clear-list-btn" class="ghost">Clear list</button>
+    </section>
 
-<div id="photoSection">
-  <input type="file" accept="image/*" capture="environment" id="photo">
-  <button id="go">Распознать</button>
-</div>
-
-<div id="textSection" style="display:none">
-  <textarea id="manualText" placeholder="Вставь или напиши текст здесь — сделаю словарик и викторину без фото..."></textarea>
-  <div class="actions">
-    <button class="mini" id="goText">📚 Слова из текста</button>
-    <button class="mini" id="quizTextBtn" style="background:#7b5cf0;color:#fff">🎯 Викторина из текста</button>
+    <section>
+      <h2>3. Quiz</h2>
+      <div class="mode-row">
+        <label><input type="radio" name="direction" value="en-ru" checked /> Word → Translation</label>
+        <label><input type="radio" name="direction" value="ru-en" /> Translation → Word</label>
+        <label><input type="radio" name="mode" value="choice" checked /> Multiple choice</label>
+        <label><input type="radio" name="mode" value="typing" /> Typing</label>
+      </div>
+      <button id="start-quiz-btn">Start quiz</button>
+      <div id="quiz-area"></div>
+      <p id="stats"></p>
+      <div class="bar"><div id="progress-fill"></div></div>
+    </section>
   </div>
-</div>
 
-<div id="status"></div>
+  <script src="https://unpkg.com/tesseract.js@4.1.0/dist/tesseract.min.js"></script>
+  <script>
+    // ==================== ОБЩЕЕ ====================
+    const input = document.getElementById('photo-input');
+    const preview = document.getElementById('photo-preview');
+    const rawText = document.getElementById('raw-text');
+    const statusMsg = document.getElementById('status-msg');
+    const neuralToggle = document.getElementById('neural-mode');
 
-<div class="actions">
-  <button class="mini" id="copyBtn">📋 Копировать</button>
-  <button class="mini" id="shareBtn">↗ Поделиться</button>
-  <button class="mini" id="saveBtn">💾 Скачать .txt</button>
-  <button class="mini" id="clearBtn">✖ Очистить</button>
-</div>
-<textarea id="result" placeholder="Текст появится здесь..."></textarea>
-
-<button class="mini history-toggle" id="historyBtn">🕘 История (<span id="histCount">0</span>)</button>
-<div id="historyList"></div>
-
-<hr>
-<div id="tableSection" style="display:none">
-  <h2>📚 Слова с переводом</h2>
-  <div id="tableWrap"></div>
-  <button id="quizBtn" style="background:#7b5cf0;margin-top:12px">🎯 Сгенерировать викторину</button>
-</div>
-
-<div id="quizSection" style="display:none">
-  <h2>🎯 Викторина</h2>
-  <div id="quizBox"></div>
-</div>
-
-<script type="module">
-const statusEl = document.getElementById('status');
-const resultEl = document.getElementById('result');
-const photoEl  = document.getElementById('photo');
-const goBtn    = document.getElementById('go');
-const toggle   = document.getElementById('modeToggle');
-
-const isNeural = () => toggle.checked;
-
-// ---------- табы: фото / текст ----------
-const tabPhoto = document.getElementById('tabPhoto');
-const tabText  = document.getElementById('tabText');
-tabPhoto.addEventListener('click', () => {
-  tabPhoto.classList.add('active'); tabText.classList.remove('active');
-  document.getElementById('photoSection').style.display = 'block';
-  document.getElementById('textSection').style.display = 'none';
-});
-tabText.addEventListener('click', () => {
-  tabText.classList.add('active'); tabPhoto.classList.remove('active');
-  document.getElementById('photoSection').style.display = 'none';
-  document.getElementById('textSection').style.display = 'block';
-});
-
-// ---------- предобработка фото ----------
-async function preprocess(file) {
-  const img = await createImageBitmap(file);
-  const scale = Math.min(2, Math.max(1, 1600 / img.width));
-  const c = document.createElement('canvas');
-  c.width = Math.round(img.width * scale);
-  c.height = Math.round(img.height * scale);
-  const ctx = c.getContext('2d');
-  ctx.drawImage(img, 0, 0, c.width, c.height);
-  const d = ctx.getImageData(0, 0, c.width, c.height);
-  const n = d.data.length / 4;
-  const gray = new Float32Array(n);
-  let min = 255, max = 0;
-  for (let i = 0; i < n; i++) {
-    const g = 0.299 * d.data[i*4] + 0.587 * d.data[i*4+1] + 0.114 * d.data[i*4+2];
-    gray[i] = g;
-    if (g < min) min = g;
-    if (g > max) max = g;
-  }
-  const range = Math.max(1, max - min);
-  for (let i = 0; i < n; i++) {
-    const v = (gray[i] - min) / range * 255;
-    d.data[i*4] = d.data[i*4+1] = d.data[i*4+2] = v;
-  }
-  ctx.putImageData(d, 0, 0);
-  return c;
-}
-
-// ---------- нарезка листа на строчки ----------
-function sliceLines(img) {
-  const W = 600, H = 1200;
-  const c = document.createElement('canvas');
-  c.width = W; c.height = H;
-  const ctx = c.getContext('2d');
-  ctx.drawImage(img, 0, 0, W, H);
-  const data = ctx.getImageData(0, 0, W, H).data;
-  const dark = new Array(H).fill(0);
-  for (let y = 0; y < H; y++)
-    for (let x = 0; x < W; x++)
-      if (data[(y * W + x) * 4] < 160) dark[y]++;
-
-  const spans = [];
-  let start = null;
-  for (let y = 0; y <= H; y++) {
-    const row = y < H && dark[y] > 3;
-    if (row && start === null) start = y;
-    else if (!row && start !== null) {
-      if (y - start >= 12) spans.push([start, y]);
-      start = null;
+    function setStatus(text) {
+      statusMsg.textContent = text;
     }
-  }
-  return spans.map(([a, b]) => {
-    const top = a / H * img.height, bot = b / H * img.height;
-    const h = Math.max(32, Math.round((bot - top) / img.width * 384));
-    const lc = document.createElement('canvas');
-    lc.width = 384; lc.height = h;
-    lc.getContext('2d').drawImage(img, 0, top, img.width, bot - top, 0, 0, 384, h);
-    return lc;
-  });
-}
 
-// ---------- ОБЫЧНОЕ: Tesseract ----------
-async function runBasic(file) {
-  if (typeof Tesseract === 'undefined')
-    throw new Error('Tesseract не загрузился — перезагрузи страницу (Ctrl+F5)');
-  statusEl.textContent = 'Подготовка фото...';
-  const canvas = await preprocess(file);
-  statusEl.textContent = 'Обычное распознавание...';
-  const result = await Tesseract.recognize(canvas, 'eng+rus', {
-    logger: m => {
-      if (m.status === 'recognizing text')
-        statusEl.textContent = `Обычное: ${Math.round(m.progress * 100)}%`;
-    },
-  });
-  return result.data.text;
-}
+    // ==================== 1. OCR ====================
 
-// ---------- НЕЙРО: TrOCR в браузере ----------
-let neuralPipe = null;
-async function runNeural(file) {
-  if (!neuralPipe) {
-    statusEl.textContent = 'Загружаю нейросеть (один раз, ~150 МБ)...';
-    const { pipeline, env } = await import(
-      'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');
-    env.allowLocalModels = false;
-    neuralPipe = await pipeline('image-to-text', 'Xenova/trocr-base-handwritten', {
-      progress_callback: p => {
-        if (p.progress) statusEl.textContent = `Загрузка модели: ${Math.round(p.progress)}%`;
-      },
-    });
-  }
-  const img = await createImageBitmap(file);
-  const lines = sliceLines(img);
-  const out = [];
-  for (let i = 0; i < lines.length; i++) {
-    statusEl.textContent = `Нейро: строчка ${i + 1} из ${lines.length}`;
-    const r = await neuralPipe(lines[i], { max_new_tokens: 64 });
-    out.push(r[0].generated_text.trim());
-  }
-  return out.filter(Boolean).join('\n') || '(текст не найден)';
-}
+    function preprocessImage(file) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxW = 1600;
+          const scale = Math.min(1, maxW / img.width) * (img.width < 1000 ? 2 : 1);
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-// ---------- история ----------
-function saveHistory(text, mode) {
-  const hist = JSON.parse(localStorage.getItem('ocr_history') || '[]');
-  hist.unshift({ text, mode, date: new Date().toLocaleString('ru-RU') });
-  localStorage.setItem('ocr_history', JSON.stringify(hist.slice(0, 50)));
-  renderHistory();
-}
-
-function renderHistory() {
-  const hist = JSON.parse(localStorage.getItem('ocr_history') || '[]');
-  document.getElementById('histCount').textContent = hist.length;
-  const list = document.getElementById('historyList');
-  list.innerHTML = '';
-  hist.forEach(h => {
-    const div = document.createElement('div');
-    div.className = 'hist-item';
-    div.innerHTML = `<div class="date">${h.date} · ${h.mode}</div><div class="txt"></div>`;
-    div.querySelector('.txt').textContent = h.text;
-    div.addEventListener('click', () => { resultEl.value = h.text; });
-    list.appendChild(div);
-  });
-}
-renderHistory();
-
-// ---------- словарь ----------
-const STOP = new Set(['и','в','на','с','а','но','не','что','как','это','для','он','она',
-  'они','мы','вы','the','and','a','an','of','to','is','are','in','on','it','was','were',
-  'you','your','for','if','or','so','as','be','etc','model','use','buy']);
-
-function extractWords(text) {
-  const raw = (text.toLowerCase().match(/[a-zа-яё][a-zа-яё-]{2,}/g) || []);
-  const seen = new Set(), words = [];
-  for (const w of raw) {
-    if (STOP.has(w) || seen.has(w)) continue;
-    seen.add(w); words.push(w);
-  }
-  return words.slice(0, 15);
-}
-
-async function translateWord(w) {
-  const dir = /[a-z]/.test(w) ? 'en|ru' : 'ru|en';
-  const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(w)}&langpair=${dir}`);
-  const j = await r.json();
-  const t = j.responseData?.translatedText || '';
-  return (t && !t.includes('MYMEMORY WARNING')) ? t : '—';
-}
-
-let wordPairs = [];
-
-async function buildTable(text) {
-  const words = extractWords(text);
-  if (!words.length) { statusEl.textContent = 'Слов для словарика не нашёл'; return; }
-  document.getElementById('tableSection').style.display = 'block';
-  document.getElementById('quizSection').style.display = 'none';
-  const wrap = document.getElementById('tableWrap');
-  wrap.innerHTML = '<table><tr><th>Слово</th><th>Перевод</th></tr>' +
-                   words.map(w => `<tr><td>${w}</td><td>...</td></tr>`).join('') + '</table>';
-  wordPairs = [];
-  for (let i = 0; i < words.length; i++) {
-    statusEl.textContent = `Перевод: ${i + 1} из ${words.length}`;
-    const tr = await translateWord(words[i]);
-    wordPairs.push({ word: words[i], tr });
-    wrap.querySelectorAll('td')[i * 2 + 1].textContent = tr;
-  }
-  statusEl.textContent = `Готово ✅ Слов: ${wordPairs.length}. Жми «Сгенерировать викторину»!`;
-}
-
-// ---------- викторина ----------
-const shuffle = a => [...a].sort(() => Math.random() - .5);
-
-function startQuiz(pairs) {
-  if (!pairs.length) { statusEl.textContent = 'Нет слов для викторины'; return; }
-  document.getElementById('quizSection').style.display = 'block';
-  const box = document.getElementById('quizBox');
-  box.innerHTML = '';
-  const answered = [];
-  const questions = shuffle(pairs).slice(0, 10);
-
-  questions.forEach((q, qi) => {
-    const others = shuffle(wordPairs.filter(p => p.tr !== q.tr && p.tr !== '—')).slice(0, 3);
-    const opts = shuffle([q.tr, ...others.map(p => p.tr)]);
-    const card = document.createElement('div');
-    card.className = 'q-card';
-    card.innerHTML = `<div class="q-word">${qi + 1}. ${q.word}</div>` +
-      opts.map(o => `<button class="q-opt">${o}</button>`).join('');
-    let done = false;
-    card.querySelectorAll('.q-opt').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (done) return;
-        done = true;
-        const correct = btn.textContent === q.tr;
-        if (correct) btn.classList.add('ok');
-        else {
-          btn.classList.add('bad');
-          card.querySelectorAll('.q-opt').forEach(b =>
-            b.textContent === q.tr && b.classList.add('ok'));
-        }
-        answered.push({ pair: q, correct });
-        if (answered.length === questions.length) showResults(answered);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const d = imageData.data;
+          const contrast = 1.4;
+          for (let i = 0; i < d.length; i += 4) {
+            const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+            let v = (gray - 128) * contrast + 128;
+            v = Math.max(0, Math.min(255, v));
+            d[i] = d[i + 1] = d[i + 2] = v;
+          }
+          ctx.putImageData(imageData, 0, 0);
+          resolve(canvas);
+        };
+        img.src = URL.createObjectURL(file);
       });
+    }
+
+    function sliceLines(img) {
+      const W = 600, H = 1200;
+      const c = document.createElement('canvas');
+      c.width = W; c.height = H;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, W, H);
+      const data = ctx.getImageData(0, 0, W, H).data;
+      const dark = new Array(H).fill(0);
+      for (let y = 0; y < H; y++)
+        for (let x = 0; x < W; x++)
+          if (data[(y * W + x) * 4] < 160) dark[y]++;
+
+      const spans = [];
+      let start = null;
+      for (let y = 0; y <= H; y++) {
+        const row = y < H && dark[y] > 3;
+        if (row && start === null) start = y;
+        else if (!row && start !== null) {
+          if (y - start >= 12) spans.push([start, y]);
+          start = null;
+        }
+      }
+      return spans.map(([a, b]) => {
+        const top = a / H * img.height, bot = b / H * img.height;
+        const h = Math.max(32, Math.round((bot - top) / img.width * 384));
+        const lc = document.createElement('canvas');
+        lc.width = 384; lc.height = h;
+        lc.getContext('2d').drawImage(img, 0, top, img.width, bot - top, 0, 0, 384, h);
+        return lc;
+      });
+    }
+
+    // НЕЙРО: TrOCR в браузере
+    let neuralPipe = null;
+    async function runNeuralOCR(file) {
+      if (!neuralPipe) {
+        setStatus('Загружаю нейросеть (один раз, ~150 МБ)...');
+        const { pipeline, env } = await import(
+          'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');
+        env.allowLocalModels = false;
+        neuralPipe = await pipeline('image-to-text', 'Xenova/trocr-base-handwritten', {
+          progress_callback: p => {
+            if (p.progress) setStatus('Загрузка модели: ' + Math.round(p.progress) + '%');
+          },
+        });
+      }
+      const img = await createImageBitmap(file);
+      const lines = sliceLines(img);
+      const out = [];
+      for (let i = 0; i < lines.length; i++) {
+        setStatus('Нейро: строчка ' + (i + 1) + ' из ' + lines.length);
+        const r = await neuralPipe(lines[i], { max_new_tokens: 64 });
+        out.push(r[0].generated_text.trim());
+      }
+      return out.filter(Boolean).join('\n') || '(текст не найден)';
+    }
+
+    input.addEventListener('change', async () => {
+      const file = input.files[0];
+      if (!file) return;
+
+      preview.src = URL.createObjectURL(file);
+      preview.style.display = 'block';
+      setStatus('Preparing image...');
+
+      try {
+        let text;
+        if (neuralToggle.checked) {
+          text = await runNeuralOCR(file);
+        } else {
+          const canvas = await preprocessImage(file);
+          setStatus('Recognizing...');
+          const res = await Tesseract.recognize(canvas, 'eng+rus', {
+            logger: m => {
+              if (m.status === 'recognizing text') {
+                setStatus('Progress: ' + Math.round(m.progress * 100) + '%');
+              }
+            }
+          });
+          text = res.data.text;
+        }
+        rawText.value = text;
+        const pairs = extractPairs(text);
+        setStatus('Done! Found ' + pairs.length + ' word pairs. Check the text, fix mistakes if needed, then press "Parse from text".');
+      } catch (err) {
+        console.error(err);
+        setStatus('Error during recognition: ' + err.message);
+      }
     });
-    box.appendChild(card);
-  });
-}
 
-// ---------- результаты ----------
-function showResults(answered) {
-  const box = document.getElementById('quizBox');
-  const wrong = answered.filter(a => !a.correct);
-  const total = answered.length;
-  const pct = Math.round((total - wrong.length) / total * 100);
+    // ==================== ПАРСЕР СЛОВАРЯ ====================
+    function cleanJunk(s) {
+      return s
+        .replace(/[^A-Za-zА-ЯЁа-яё'’()\-\s.,]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
 
-  box.querySelectorAll('.res-card').forEach(el => el.remove());
-  const card = document.createElement('div');
-  card.className = 'res-card';
+    function isMostlyLatin(s) {
+      const latin = (s.match(/[A-Za-z]/g) || []).length;
+      const cyr = (s.match(/[А-ЯЁа-яё]/g) || []).length;
+      return latin >= 2 && latin > cyr;
+    }
 
-  let verdict;
-  if (pct === 100)      verdict = 'Идеально! Так держать 🔥';
-  else if (pct >= 70)   verdict = 'Сильный результат! Осталось добить парочку.';
-  else if (pct >= 40)   verdict = 'Половина за тобой — но есть над чем поработать.';
-  else                  verdict = 'Слова сложные — повторим их отдельно!';
+    function isMostlyCyrillic(s) {
+      const latin = (s.match(/[A-Za-z]/g) || []).length;
+      const cyr = (s.match(/[А-ЯЁа-яё]/g) || []).length;
+      return cyr >= 2 && cyr > latin;
+    }
 
-  let chart = '';
-  answered.forEach(a => {
-    const w = Math.max(8, Math.round(100 / total));
-    chart += `<div class="chart-row">
-      <div class="chart-word">${a.pair.word}</div>
-      <div class="chart-bar"><div class="chart-fill ${a.correct ? 'good' : 'bad'}"
-        style="width:${a.correct ? w : w * 0.35}%"></div></div>
-      <div class="chart-stat">${a.correct ? '✅ верно' : '❌ мимо'}</div>
-    </div>`;
-  });
+    function validPair(word, translation) {
+      if (word.split(' ').length > 5 || translation.split(' ').length > 5) return false;
+      if (!/[A-Za-z]{3,}/.test(word)) return false;
+      if (!/[А-ЯЁа-яё]{3,}/.test(translation)) return false;
+      return true;
+    }
 
-  const pull = wrong.length
-    ? `<div class="summary">📝 <b>Подтянуть:</b> ${wrong.map(a =>
-        `${a.pair.word} → ${a.pair.tr}`).join(', ')}</div>`
-    : `<div class="summary">🎉 Ошибок нет — словарик освоен!</div>`;
+    function extractPairs(text) {
+      const pairs = [];
+      const lines = text.split('\n').map(cleanJunk).filter(l => l.length > 1);
+      const used = new Set();
 
-  card.innerHTML = `
-    <div class="res-title">Результат</div>
-    <div class="res-score">${total - wrong.length} / ${total} (${pct}%)</div>
-    <div style="font-size:14px;color:#555;margin:4px 0 6px">${verdict}</div>
-    <div class="chart">${chart}</div>
-    ${pull}
-    ${wrong.length ? `
-    <div style="font-weight:700;margin-top:14px">Сделать викторину из ошибочных слов?</div>
-    <div class="dialog-btns">
-      <button class="mini btn-stay" id="stayBtn">Остаться</button>
-      <button class="mini btn-go" id="goBroBtn">Давай броооу!</button>
-    </div>` : ''}`;
+      // 1) пары в одной строке: "word - перевод" или "word перевод"
+      lines.forEach((line, i) => {
+        let m = line.match(/^(.{2,50}?)\s*[-—–:]+\s*(.{2,60})$/);
+        if (m && isMostlyLatin(m[1]) && isMostlyCyrillic(m[2]) && validPair(m[1].trim(), m[2].trim())) {
+          pairs.push({ word: m[1].trim(), translation: m[2].trim(), example: '' });
+          used.add(i);
+          return;
+        }
+        m = line.match(/^([A-Za-z][A-Za-z'’()\-\s.]{1,49}?)\s+([А-ЯЁа-яё][А-ЯЁа-яё'’()\-\s,]{1,59})$/);
+        if (m && validPair(m[1].trim(), m[2].trim())) {
+          pairs.push({ word: m[1].trim(), translation: m[2].trim(), example: '' });
+          used.add(i);
+        }
+      });
 
-  box.appendChild(card);
-  card.scrollIntoView({ behavior: 'smooth' });
+      // 2) столбик: английская строка + русская строка следом
+      for (let i = 0; i < lines.length; i++) {
+        if (used.has(i) || !isMostlyLatin(lines[i])) continue;
+        for (let j = i + 1; j < lines.length && j <= i + 2; j++) {
+          if (used.has(j)) continue;
+          if (isMostlyCyrillic(lines[j])) {
+            if (validPair(lines[i], lines[j])) {
+              pairs.push({ word: lines[i], translation: lines[j], example: '' });
+              used.add(i); used.add(j);
+            }
+            break;
+          }
+          if (isMostlyLatin(lines[j])) break;
+        }
+      }
 
-  if (wrong.length) {
-    card.querySelector('#stayBtn').addEventListener('click', () => card.remove());
-    card.querySelector('#goBroBtn').addEventListener('click', () => {
-      card.remove();
-      startQuiz(wrong.map(a => a.pair));
+      return pairs;
+    }
+
+    // ==================== 2. СЛОВАРЬ ====================
+    let currentWords = JSON.parse(localStorage.getItem('vocab_list') || '[]');
+    const tbody = document.getElementById('words-tbody');
+
+    function renderTable() {
+      tbody.innerHTML = '';
+      currentWords.forEach((item, index) => {
+        const tr = document.createElement('tr');
+
+        const tdWord = document.createElement('td');
+        const tdTrans = document.createElement('td');
+        const tdExample = document.createElement('td');
+        const tdDelete = document.createElement('td');
+
+        const wordInput = document.createElement('input');
+        wordInput.type = 'text';
+        wordInput.value = item.word;
+        wordInput.addEventListener('input', () => { currentWords[index].word = wordInput.value; });
+
+        const transInput = document.createElement('input');
+        transInput.type = 'text';
+        transInput.value = item.translation;
+        transInput.addEventListener('input', () => { currentWords[index].translation = transInput.value; });
+
+        const exampleInput = document.createElement('input');
+        exampleInput.type = 'text';
+        exampleInput.placeholder = 'Example sentence';
+        exampleInput.value = item.example || '';
+        exampleInput.addEventListener('input', () => { currentWords[index].example = exampleInput.value; });
+
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'X';
+        delBtn.addEventListener('click', () => {
+          currentWords.splice(index, 1);
+          renderTable();
+        });
+
+        tdWord.appendChild(wordInput);
+        tdTrans.appendChild(transInput);
+        tdExample.appendChild(exampleInput);
+        tdDelete.appendChild(delBtn);
+
+        tr.appendChild(tdWord);
+        tr.appendChild(tdTrans);
+        tr.appendChild(tdExample);
+        tr.appendChild(tdDelete);
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById('parse-btn').addEventListener('click', () => {
+      const text = rawText.value;
+      if (!text.trim()) {
+        setStatus('Load a photo or paste text first!');
+        return;
+      }
+
+      const foundWords = extractPairs(text);
+
+      if (foundWords.length === 0) {
+        setStatus('No word pairs found. Make sure the photo shows only the vocabulary table (format: "word - перевод", one per line).');
+        return;
+      }
+
+      const seen = new Set();
+      const unique = foundWords.filter(p => {
+        const key = p.word.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      currentWords = unique;
+      renderTable();
+      setStatus('Found ' + unique.length + ' words. Edit cells if needed, then "Save list".');
     });
-  }
-}
 
-document.getElementById('quizBtn').addEventListener('click', () => startQuiz(wordPairs));
+    // авто-перевод строк без перевода
+    document.getElementById('autotr-btn').addEventListener('click', async () => {
+      const need = currentWords.filter(w => w.word && !w.translation);
+      if (!need.length) {
+        setStatus('All words already have translations.');
+        return;
+      }
+      for (let i = 0; i < need.length; i++) {
+        setStatus('Translating: ' + (i + 1) + ' / ' + need.length + ' (' + need[i].word + ')');
+        try {
+          const dir = /[A-Za-z]/.test(need[i].word) ? 'en|ru' : 'ru|en';
+          const r = await fetch('https://api.mymemory.translated.net/get?q=' +
+            encodeURIComponent(need[i].word) + '&langpair=' + dir);
+          const j = await r.json();
+          const t = j.responseData && j.responseData.translatedText || '';
+          if (t && !t.includes('MYMEMORY WARNING')) need[i].translation = t;
+        } catch (e) { /* пропускаем неудачи */ }
+      }
+      renderTable();
+      localStorage.setItem('vocab_list', JSON.stringify(currentWords));
+      setStatus('Translated ' + need.length + ' words. Saved.');
+    });
 
-// ---------- текстовая вкладка ----------
-document.getElementById('goText').addEventListener('click', () => {
-  const t = document.getElementById('manualText').value.trim();
-  if (!t) { statusEl.textContent = 'Сначала вставь текст ✍️'; return; }
-  resultEl.value = t;
-  saveHistory(t, 'текст');
-  buildTable(t);
-});
+    document.getElementById('add-row-btn').addEventListener('click', () => {
+      currentWords.push({ word: '', translation: '', example: '' });
+      renderTable();
+    });
 
-document.getElementById('quizTextBtn').addEventListener('click', async () => {
-  const t = document.getElementById('manualText').value.trim();
-  if (!t) { statusEl.textContent = 'Сначала вставь текст ✍️'; return; }
-  if (!wordPairs.length) {
-    await buildTable(t);
-    if (!wordPairs.length) return;
-  }
-  document.getElementById('quizSection').style.display = 'block';
-  startQuiz(wordPairs);
-});
+    document.getElementById('save-list-btn').addEventListener('click', () => {
+      localStorage.setItem('vocab_list', JSON.stringify(currentWords));
+      setStatus('List saved (' + currentWords.length + ' words). It will stay after page reload.');
+    });
 
-// ---------- кнопки действия ----------
-document.getElementById('copyBtn').addEventListener('click', async () => {
-  if (!resultEl.value) return;
-  await navigator.clipboard.writeText(resultEl.value);
-  statusEl.textContent = 'Скопировано ✅';
-});
+    document.getElementById('clear-list-btn').addEventListener('click', () => {
+      if (confirm('Delete all words?')) {
+        currentWords = [];
+        localStorage.removeItem('vocab_list');
+        renderTable();
+        setStatus('List cleared.');
+      }
+    });
 
-document.getElementById('shareBtn').addEventListener('click', async () => {
-  if (!resultEl.value) return;
-  if (navigator.share) {
-    try { await navigator.share({ text: resultEl.value }); } catch {}
-  } else {
-    await navigator.clipboard.writeText(resultEl.value);
-    statusEl.textContent = 'Шаринг недоступен — скопировал в буфер';
-  }
-});
+    renderTable();
 
-document.getElementById('saveBtn').addEventListener('click', () => {
-  if (!resultEl.value) return;
-  const blob = new Blob([resultEl.value], { type: 'text/plain;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'ocr_' + Date.now() + '.txt';
-  a.click();
-  URL.revokeObjectURL(a.href);
-});
+    // ==================== 3. КВИЗ ====================
+    const quizArea = document.getElementById('quiz-area');
+    const stats = document.getElementById('stats');
+    const progressFill = document.getElementById('progress-fill');
 
-document.getElementById('clearBtn').addEventListener('click', () => {
-  resultEl.value = '';
-  photoEl.value = '';
-  statusEl.textContent = '';
-  document.getElementById('tableSection').style.display = 'none';
-  document.getElementById('quizSection').style.display = 'none';
-});
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
 
-// ---------- распознать ----------
-goBtn.addEventListener('click', async () => {
-  const file = photoEl.files[0];
-  if (!file) { statusEl.textContent = 'Сначала выбери фото 📷'; return; }
-  goBtn.disabled = true;
-  resultEl.value = '';
-  try {
-    resultEl.value = isNeural() ? await runNeural(file) : await runBasic(file);
-    saveHistory(resultEl.value, isNeural() ? 'нейро' : 'обычное');
-    buildTable(resultEl.value);
-  } catch (e) {
-    statusEl.textContent = 'Ошибка: ' + e.message;
-  } finally {
-    goBtn.disabled = false;
-  }
-});
-</script>
+    function startQuizRound(wordList) {
+      const validWords = wordList.filter(w => w.word && w.translation);
+      if (validWords.length < 1) {
+        setStatus('Need at least 1 word with translation for the quiz!');
+        return;
+      }
+
+      const direction = document.querySelector('input[name="direction"]:checked').value;
+      let mode = document.querySelector('input[name="mode"]:checked').value;
+      if (validWords.length < 4) mode = 'typing';
+      const shuffled = shuffle(validWords);
+      let currentIndex = 0;
+      let score = 0;
+      const answered = [];
+
+      function question() {
+        return direction === 'en-ru'
+          ? { prompt: shuffled[currentIndex].word, correct: shuffled[currentIndex].translation }
+          : { prompt: shuffled[currentIndex].translation, correct: shuffled[currentIndex].word };
+      }
+
+      function showProgress() {
+        stats.textContent = 'Progress: ' + (currentIndex + 1) + ' / ' + shuffled.length + ' | Score: ' + score;
+        progressFill.style.width = (currentIndex / shuffled.length * 100) + '%';
+      }
+
+      function showResults() {
+        progressFill.style.width = '100%';
+        const wrong = answered.filter(a => !a.correct);
+        const total = answered.length;
+        const pct = Math.round((total - wrong.length) / total * 100);
+
+        let verdict;
+        if (pct === 100)    verdict = 'Идеально! Так держать 🔥';
+        else if (pct >= 70) verdict = 'Сильный результат! Осталось добить парочку.';
+        else if (pct >= 40) verdict = 'Половина за тобой — но есть над чем поработать.';
+        else                verdict = 'Слова сложные — повторим их отдельно!';
+
+        let chart = '';
+        answered.forEach(a => {
+          const w = Math.max(8, Math.round(100 / total));
+          chart += '<div class="chart-row">' +
+            '<div class="chart-word">' + a.item.word + '</div>' +
+            '<div class="chart-bar"><div class="chart-fill ' + (a.correct ? 'good' : 'bad') +
+            '" style="width:' + (a.correct ? w : w * 0.35) + '%"></div></div>' +
+            '<div class="chart-stat">' + (a.correct ? '✅ верно' : '❌ мимо') + '</div>' +
+            '</div>';
+        });
+
+        const pull = wrong.length
+          ? '<div class="summary">📝 <b>Подтянуть:</b> ' +
+            wrong.map(a => a.item.word + ' → ' + a.item.translation).join(', ') + '</div>'
+          : '<div class="summary">🎉 Ошибок нет — словарик освоен!</div>';
+
+        const dialog = wrong.length
+          ? '<div style="font-weight:700;margin-top:14px">Сделать викторину из ошибочных слов?</div>' +
+            '<div class="dialog-btns">' +
+            '<button class="ghost" id="stay-btn">Остаться</button>' +
+            '<button class="purple" id="go-bro-btn">Давай броооу!</button>' +
+            '</div>'
+          : '';
+
+        quizArea.innerHTML =
+          '<div class="quiz-card res-card">' +
+          '<h3>Результат: ' + (total - wrong.length) + ' / ' + total + ' (' + pct + '%)</h3>' +
+          '<p>' + verdict + '</p>' +
+          '<div class="chart">' + chart + '</div>' +
+          pull + dialog +
+          '</div>';
+        stats.textContent = '';
+
+        if (wrong.length) {
+          document.getElementById('stay-btn').addEventListener('click', () => {
+            quizArea.innerHTML = '';
+            progressFill.style.width = '0';
+          });
+          document.getElementById('go-bro-btn').addEventListener('click', () => {
+            startQuizRound(wrong.map(a => a.item));
+          });
+        }
+      }
+
+      function finish() {
+        showResults();
+      }
+
+      function next() {
+        currentIndex++;
+        if (currentIndex >= shuffled.length) finish();
+        else render();
+      }
+
+      function render() {
+        quizArea.innerHTML = '';
+        showProgress();
+        const q = question();
+        const card = document.createElement('div');
+        card.className = 'quiz-card';
+
+        const label = document.createElement('div');
+        label.textContent = mode === 'choice'
+          ? 'Choose the correct answer:'
+          : 'Type the translation:';
+        const wordEl = document.createElement('div');
+        wordEl.className = 'word';
+        wordEl.textContent = q.prompt;
+        card.appendChild(label);
+        card.appendChild(wordEl);
+
+        const feedback = document.createElement('p');
+        feedback.className = 'feedback';
+
+        function recordAnswer(isRight) {
+          answered.push({ item: shuffled[currentIndex], correct: isRight });
+        }
+
+        if (mode === 'choice') {
+          const wrongs = shuffle(validWords.filter(w => w !== shuffled[currentIndex])).slice(0, 3);
+          const options = shuffle([q.correct, ...wrongs.map(w => direction === 'en-ru' ? w.translation : w.word)]);
+
+          const optionsBox = document.createElement('div');
+          optionsBox.className = 'options';
+
+          options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.textContent = opt;
+            btn.addEventListener('click', () => {
+              const isRight = opt === q.correct;
+              [...optionsBox.children].forEach(b => {
+                b.disabled = true;
+                if (b.textContent === q.correct) b.classList.add('correct');
+              });
+              if (isRight) {
+                score++;
+                feedback.textContent = 'Correct! 🎉';
+                feedback.className = 'feedback ok';
+              } else {
+                btn.classList.add('wrong');
+                feedback.textContent = 'Oops! The right answer is: ' + q.correct;
+                feedback.className = 'feedback fail';
+              }
+              recordAnswer(isRight);
+              const nextBtn = document.createElement('button');
+              nextBtn.textContent = 'Next →';
+              nextBtn.addEventListener('click', next);
+              card.appendChild(nextBtn);
+            });
+            optionsBox.appendChild(btn);
+          });
+          card.appendChild(optionsBox);
+        } else {
+          const answerInput = document.createElement('input');
+          answerInput.className = 'answer-input';
+          answerInput.placeholder = 'Your answer...';
+          const checkBtn = document.createElement('button');
+          checkBtn.textContent = 'Check';
+
+          function check() {
+            const answer = answerInput.value.trim().toLowerCase();
+            const correct = q.correct.trim().toLowerCase();
+            answerInput.disabled = true;
+            checkBtn.disabled = true;
+            const isRight = answer === correct;
+            if (isRight) {
+              score++;
+              feedback.textContent = 'Correct! 🎉';
+              feedback.className = 'feedback ok';
+            } else {
+              feedback.textContent = 'Oops! The right answer is: ' + q.correct;
+              feedback.className = 'feedback fail';
+            }
+            recordAnswer(isRight);
+            const nextBtn = document.createElement('button');
+            nextBtn.textContent = 'Next →';
+            nextBtn.addEventListener('click', next);
+            card.appendChild(nextBtn);
+          }
+
+          checkBtn.addEventListener('click', check);
+          answerInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !checkBtn.disabled) check();
+          });
+
+          card.appendChild(answerInput);
+          card.appendChild(checkBtn);
+        }
+
+        card.appendChild(feedback);
+        quizArea.appendChild(card);
+        const focusTarget = card.querySelector('.answer-input');
+        if (focusTarget) focusTarget.focus();
+      }
+
+      render();
+    }
+
+    document.getElementById('start-quiz-btn').addEventListener('click', () => {
+      const valid = currentWords.filter(w => w.word && w.translation);
+      const noTrans = currentWords.filter(w => w.word && !w.translation).length;
+      if (!valid.length) {
+        setStatus('Нет ни одного слова с переводом. Нажми "Auto-translate" или заполни переводы руками.');
+        return;
+      }
+      if (noTrans) setStatus('Внимание: ' + noTrans + ' слов без перевода — они в квиз не попадут. Жми "Auto-translate".');
+      startQuizRound(valid);
+    });
+  </script>
 </body>
 </html>
