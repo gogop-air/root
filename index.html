@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Vocab Trainer — English Course</title>
+  <title>Тренажёр слов — Английский</title>
 
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="favicon.ico" />
@@ -11,7 +11,7 @@
   <meta name="theme-color" content="#1a73e8" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="Vocab" />
+  <meta name="apple-mobile-web-app-title" content="Слова" />
 
   <style>
     * { box-sizing: border-box; }
@@ -61,7 +61,7 @@
     button.purple { background: #7b5cf0; }
     button.purple:hover { background: #5f43d6; }
 
-    /* ДВУХКОЛОНОЧНАЯ ТАБЛИЦА СЛОВ */
+    /* ТАБЛИЦА СЛОВ */
     #words-table {
       width: 100%;
       table-layout: fixed;
@@ -167,10 +167,10 @@
 </head>
 <body>
   <div class="container">
-    <h1>Vocab Trainer — English Course</h1>
+    <h1>Тренажёр слов — Английский</h1>
 
     <section>
-      <h2>1. Load photo &amp; OCR</h2>
+      <h2>1. Загрузи фото и распознай</h2>
       <div class="mode-switch">
         <span class="label">Обычное</span>
         <label class="toggle">
@@ -182,35 +182,35 @@
       </div>
       <input type="file" id="photo-input" accept="image/*" />
       <p class="hint">Совет: снимай ТОЛЬКО таблицу со словами, крупно и ровно (сверху вниз, без наклона и тени). Чем чище кадр — тем точнее распознавание.</p>
-      <img id="photo-preview" alt="preview" />
+      <img id="photo-preview" alt="Предпросмотр" />
       <p id="status-msg"></p>
-      <textarea id="raw-text" rows="6" placeholder="Recognized text will appear here (or paste text manually)"></textarea>
+      <textarea id="raw-text" rows="6" placeholder="Распознанный текст появится здесь (или вставь текст вручную)"></textarea>
     </section>
 
     <section>
-      <h2>2. Words list</h2>
-      <button id="parse-btn">Parse from text</button>
-      <button id="autotr-btn" class="ghost">Auto-translate 🌐</button>
-      <button id="add-row-btn" class="ghost">Add row</button>
+      <h2>2. Список слов</h2>
+      <button id="parse-btn">Разобрать текст</button>
+      <button id="autotr-btn" class="ghost">Автоперевод 🌐</button>
+      <button id="add-row-btn" class="ghost">Добавить строку</button>
       <table id="words-table">
         <thead>
-          <tr><th>Word</th><th>Translation</th><th>Example</th><th></th></tr>
+          <tr><th>Слово</th><th>Перевод</th><th>Пример</th><th></th></tr>
         </thead>
         <tbody id="words-tbody"></tbody>
       </table>
-      <button id="save-list-btn">Save list</button>
-      <button id="clear-list-btn" class="ghost">Clear list</button>
+      <button id="save-list-btn">Сохранить список</button>
+      <button id="clear-list-btn" class="ghost">Очистить список</button>
     </section>
 
     <section>
-      <h2>3. Quiz</h2>
+      <h2>3. Викторина</h2>
       <div class="mode-row">
-        <label><input type="radio" name="direction" value="en-ru" checked /> Word → Translation</label>
-        <label><input type="radio" name="direction" value="ru-en" /> Translation → Word</label>
-        <label><input type="radio" name="mode" value="choice" checked /> Multiple choice</label>
-        <label><input type="radio" name="mode" value="typing" /> Typing</label>
+        <label><input type="radio" name="direction" value="en-ru" checked /> Слово → Перевод</label>
+        <label><input type="radio" name="direction" value="ru-en" /> Перевод → Слово</label>
+        <label><input type="radio" name="mode" value="choice" checked /> С вариантами</label>
+        <label><input type="radio" name="mode" value="typing" /> Ввод текста</label>
       </div>
-      <button id="start-quiz-btn">Start quiz</button>
+      <button id="start-quiz-btn">Начать викторину</button>
       <div id="quiz-area"></div>
       <p id="stats"></p>
       <div class="bar"><div id="progress-fill"></div></div>
@@ -323,7 +323,7 @@
 
       preview.src = URL.createObjectURL(file);
       preview.style.display = 'block';
-      setStatus('Preparing image...');
+      setStatus('Готовлю фото...');
 
       try {
         let text;
@@ -331,11 +331,11 @@
           text = await runNeuralOCR(file);
         } else {
           const canvas = await preprocessImage(file);
-          setStatus('Recognizing...');
+          setStatus('Распознаю...');
           const res = await Tesseract.recognize(canvas, 'eng+rus', {
             logger: m => {
               if (m.status === 'recognizing text') {
-                setStatus('Progress: ' + Math.round(m.progress * 100) + '%');
+                setStatus('Прогресс: ' + Math.round(m.progress * 100) + '%');
               }
             }
           });
@@ -343,10 +343,10 @@
         }
         rawText.value = text;
         const pairs = extractPairs(text);
-        setStatus('Done! Found ' + pairs.length + ' word pairs. Check the text, fix mistakes if needed, then press "Parse from text".');
+        setStatus('Готово! Нашёл ' + pairs.length + ' пар слов. Проверь текст, поправь ошибки и жми «Разобрать текст».');
       } catch (err) {
         console.error(err);
-        setStatus('Error during recognition: ' + err.message);
+        setStatus('Ошибка при распознавании: ' + err.message);
       }
     });
 
@@ -382,7 +382,7 @@
       const lines = text.split('\n').map(cleanJunk).filter(l => l.length > 1);
       const used = new Set();
 
-      // 1) пары в одной строке: "word - перевод" или "word перевод"
+      // 1) пары в одной строке: "слово - перевод" или "слово перевод"
       lines.forEach((line, i) => {
         let m = line.match(/^(.{2,50}?)\s*[-—–:]+\s*(.{2,60})$/);
         if (m && isMostlyLatin(m[1]) && isMostlyCyrillic(m[2]) && validPair(m[1].trim(), m[2].trim())) {
@@ -442,7 +442,7 @@
 
         const exampleInput = document.createElement('input');
         exampleInput.type = 'text';
-        exampleInput.placeholder = 'Example sentence';
+        exampleInput.placeholder = 'Пример предложения';
         exampleInput.value = item.example || '';
         exampleInput.addEventListener('input', () => { currentWords[index].example = exampleInput.value; });
 
@@ -469,14 +469,14 @@
     document.getElementById('parse-btn').addEventListener('click', () => {
       const text = rawText.value;
       if (!text.trim()) {
-        setStatus('Load a photo or paste text first!');
+        setStatus('Сначала загрузи фото или вставь текст!');
         return;
       }
 
       const foundWords = extractPairs(text);
 
       if (foundWords.length === 0) {
-        setStatus('No word pairs found. Make sure the photo shows only the vocabulary table (format: "word - перевод", one per line).');
+        setStatus('Пар не нашёл. Убедись, что на фото только таблица со словами (формат: «word - перевод», по одному в строке).');
         return;
       }
 
@@ -490,18 +490,18 @@
 
       currentWords = unique;
       renderTable();
-      setStatus('Found ' + unique.length + ' words. Edit cells if needed, then "Save list".');
+      setStatus('Нашёл ' + unique.length + ' слов. При необходимости поправь ячейки, затем жми «Сохранить список».');
     });
 
     // авто-перевод строк без перевода
     document.getElementById('autotr-btn').addEventListener('click', async () => {
       const need = currentWords.filter(w => w.word && !w.translation);
       if (!need.length) {
-        setStatus('All words already have translations.');
+        setStatus('У всех слов уже есть перевод.');
         return;
       }
       for (let i = 0; i < need.length; i++) {
-        setStatus('Translating: ' + (i + 1) + ' / ' + need.length + ' (' + need[i].word + ')');
+        setStatus('Перевожу: ' + (i + 1) + ' из ' + need.length + ' (' + need[i].word + ')');
         try {
           const dir = /[A-Za-z]/.test(need[i].word) ? 'en|ru' : 'ru|en';
           const r = await fetch('https://api.mymemory.translated.net/get?q=' +
@@ -513,7 +513,7 @@
       }
       renderTable();
       localStorage.setItem('vocab_list', JSON.stringify(currentWords));
-      setStatus('Translated ' + need.length + ' words. Saved.');
+      setStatus('Перевёл ' + need.length + ' слов. Список сохранён.');
     });
 
     document.getElementById('add-row-btn').addEventListener('click', () => {
@@ -523,21 +523,21 @@
 
     document.getElementById('save-list-btn').addEventListener('click', () => {
       localStorage.setItem('vocab_list', JSON.stringify(currentWords));
-      setStatus('List saved (' + currentWords.length + ' words). It will stay after page reload.');
+      setStatus('Список сохранён (' + currentWords.length + ' слов). Он останется после перезагрузки страницы.');
     });
 
     document.getElementById('clear-list-btn').addEventListener('click', () => {
-      if (confirm('Delete all words?')) {
+      if (confirm('Удалить все слова?')) {
         currentWords = [];
         localStorage.removeItem('vocab_list');
         renderTable();
-        setStatus('List cleared.');
+        setStatus('Список очищен.');
       }
     });
 
     renderTable();
 
-    // ==================== 3. КВИЗ ====================
+    // ==================== 3. ВИКТОРИНА ====================
     const quizArea = document.getElementById('quiz-area');
     const stats = document.getElementById('stats');
     const progressFill = document.getElementById('progress-fill');
@@ -554,7 +554,7 @@
     function startQuizRound(wordList) {
       const validWords = wordList.filter(w => w.word && w.translation);
       if (validWords.length < 1) {
-        setStatus('Need at least 1 word with translation for the quiz!');
+        setStatus('Для викторины нужно хотя бы одно слово с переводом!');
         return;
       }
 
@@ -573,7 +573,7 @@
       }
 
       function showProgress() {
-        stats.textContent = 'Progress: ' + (currentIndex + 1) + ' / ' + shuffled.length + ' | Score: ' + score;
+        stats.textContent = 'Прогресс: ' + (currentIndex + 1) + ' / ' + shuffled.length + ' | Счёт: ' + score;
         progressFill.style.width = (currentIndex / shuffled.length * 100) + '%';
       }
 
@@ -652,8 +652,8 @@
 
         const label = document.createElement('div');
         label.textContent = mode === 'choice'
-          ? 'Choose the correct answer:'
-          : 'Type the translation:';
+          ? 'Выбери правильный ответ:'
+          : 'Напиши перевод:';
         const wordEl = document.createElement('div');
         wordEl.className = 'word';
         wordEl.textContent = q.prompt;
@@ -685,16 +685,16 @@
               });
               if (isRight) {
                 score++;
-                feedback.textContent = 'Correct! 🎉';
+                feedback.textContent = 'Верно! 🎉';
                 feedback.className = 'feedback ok';
               } else {
                 btn.classList.add('wrong');
-                feedback.textContent = 'Oops! The right answer is: ' + q.correct;
+                feedback.textContent = 'Мимо! Правильный ответ: ' + q.correct;
                 feedback.className = 'feedback fail';
               }
               recordAnswer(isRight);
               const nextBtn = document.createElement('button');
-              nextBtn.textContent = 'Next →';
+              nextBtn.textContent = 'Дальше →';
               nextBtn.addEventListener('click', next);
               card.appendChild(nextBtn);
             });
@@ -704,9 +704,9 @@
         } else {
           const answerInput = document.createElement('input');
           answerInput.className = 'answer-input';
-          answerInput.placeholder = 'Your answer...';
+          answerInput.placeholder = 'Твой ответ...';
           const checkBtn = document.createElement('button');
-          checkBtn.textContent = 'Check';
+          checkBtn.textContent = 'Проверить';
 
           function check() {
             const answer = answerInput.value.trim().toLowerCase();
@@ -716,15 +716,15 @@
             const isRight = answer === correct;
             if (isRight) {
               score++;
-              feedback.textContent = 'Correct! 🎉';
+              feedback.textContent = 'Верно! 🎉';
               feedback.className = 'feedback ok';
             } else {
-              feedback.textContent = 'Oops! The right answer is: ' + q.correct;
+              feedback.textContent = 'Мимо! Правильный ответ: ' + q.correct;
               feedback.className = 'feedback fail';
             }
             recordAnswer(isRight);
             const nextBtn = document.createElement('button');
-            nextBtn.textContent = 'Next →';
+            nextBtn.textContent = 'Дальше →';
             nextBtn.addEventListener('click', next);
             card.appendChild(nextBtn);
           }
@@ -751,10 +751,10 @@
       const valid = currentWords.filter(w => w.word && w.translation);
       const noTrans = currentWords.filter(w => w.word && !w.translation).length;
       if (!valid.length) {
-        setStatus('Нет ни одного слова с переводом. Нажми "Auto-translate" или заполни переводы руками.');
+        setStatus('Нет ни одного слова с переводом. Нажми «Автоперевод» или заполни переводы руками.');
         return;
       }
-      if (noTrans) setStatus('Внимание: ' + noTrans + ' слов без перевода — они в квиз не попадут. Жми "Auto-translate".');
+      if (noTrans) setStatus('Внимание: ' + noTrans + ' слов без перевода — они в викторину не попадут. Жми «Автоперевод».');
       startQuizRound(valid);
     });
   </script>
